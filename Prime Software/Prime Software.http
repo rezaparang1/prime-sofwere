@@ -1,0 +1,6 @@
+@Prime_Software_HostAddress = http://localhost:5298
+
+GET {{Prime_Software_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
