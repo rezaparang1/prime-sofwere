@@ -22,6 +22,8 @@ namespace DataAccessLayer
         {
             //optionsBuilder.UseNpgsql(configuration.GetConnectionString("DefaultConnection"));
         }
+        //Customer_Club
+        public DbSet<BusinessEntity.Customer_Club.Customer> Customer { get; set; } = null!;
         //Bank
         public DbSet<BusinessEntity.Bank.Definition_Bank> Definition_Bank { get; set; } = null!;
         public DbSet<BusinessEntity.Bank.Definition_Bank_Account> Definition_Bank_Account { get; set; } = null!;
