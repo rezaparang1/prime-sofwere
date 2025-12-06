@@ -22,11 +22,9 @@ namespace DataAccessLayer.Repository.Product
             _context = context;
             _logger = logger;
         }
-        //*****SEARCH*****
-        public async Task<IEnumerable<ProductSalesByDateDto>> GetProductSalesReportByDateAsync(
-     DateTime startDate,
-     DateTime endDate,
-     string? barcode = null)
+       
+        //****Search For AI *****
+        public async Task<IEnumerable<ProductSalesByDateDto>> GetProductSalesReportByDateAsync(DateTime startDate, DateTime endDate, string? barcode = null)
         {
             _logger.LogInformation(
                 "Sales report generation started for range {Start} to {End}, barcode: {Barcode}.",
@@ -36,13 +34,11 @@ namespace DataAccessLayer.Repository.Product
             startDate = DateTime.SpecifyKind(startDate, DateTimeKind.Utc);
             endDate = DateTime.SpecifyKind(endDate, DateTimeKind.Utc);
 
-            // گام 1: فیلتر آیتم‌های فاکتور بر اساس تاریخ
             var query = _context.Invoices_Item
                 .Where(ii => ii.Invoices != null &&
                              ii.Invoices.Date >= startDate &&
                              ii.Invoices.Date <= endDate);
 
-            // گام 2: فیلتر اختیاری بر اساس بارکد
             if (!string.IsNullOrEmpty(barcode))
             {
                 query = query.Where(ii => ii.Product.Units
@@ -50,7 +46,6 @@ namespace DataAccessLayer.Repository.Product
                                              .Any(b => b.Barcode == barcode));
             }
 
-            // گام 3: گروه‌بندی روی ProductId و جمع فروش روزانه (فقط ستون‌های مستقیم)
             var groupedData = await query
                 .GroupBy(ii => ii.ProductId)
                 .Select(g => new
@@ -66,13 +61,11 @@ namespace DataAccessLayer.Repository.Product
                 })
                 .ToListAsync();
 
-            // گام 4: گرفتن نام محصول از جدول Product بعد از GroupBy
             var productIds = groupedData.Select(g => g.ProductId).ToList();
             var products = await _context.Product
                 .Where(p => productIds.Contains(p.Id))
                 .ToDictionaryAsync(p => p.Id, p => p.Name);
 
-            // گام 5: ساخت DTO نهایی و تبدیل تاریخ به شمسی
             var result = groupedData.Select(g => new ProductSalesByDateDto
             {
                 ProductId = g.ProductId,
@@ -98,23 +91,19 @@ namespace DataAccessLayer.Repository.Product
             var pc = new System.Globalization.PersianCalendar();
             return $"{pc.GetYear(date):0000}/{pc.GetMonth(date):00}/{pc.GetDayOfMonth(date):00}";
         }
-
         public async Task<IEnumerable<ProductInventoryDto>> GetProductInventoryAsync(string? barcode = null)
         {
-            // query محصولات و بارکدها
             var query = _context.Product
                 .SelectMany(p => p.Units
                                   .SelectMany(u => u.Barcodes)
                                   .DefaultIfEmpty(), (p, b) => new { Product = p, Barcode = b })
                 .AsQueryable();
 
-            // فیلتر اختیاری بر اساس بارکد
             if (!string.IsNullOrEmpty(barcode))
             {
                 query = query.Where(x => x.Barcode != null && x.Barcode.Barcode == barcode);
             }
 
-            // projection به DTO
             var result = await query
                 .Select(x => new ProductInventoryDto
                 {
@@ -128,7 +117,7 @@ namespace DataAccessLayer.Repository.Product
 
             return result;
         }
-
+        //*****SEARCH*****
         public async Task<BusinessEntity.ProductDto?> GetProductByBarcodeAsync(string barcode)
         {
             var productUnit = await _context.ProductBarcodes
