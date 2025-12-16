@@ -153,45 +153,40 @@ namespace DataAccessLayer.Repository.Settings
                 return "خطای غیرمنتظره رخ داد. لطفاً مجدداً تلاش کنید.";
             }
         }
-        public async Task<string> Delete(int userId, int id)
+        public async Task<string> Delete(int UserId, int id)
         {
-            await using var transaction = await _context.Database.BeginTransactionAsync();
-            try
+            var group = await _context.Group_User
+                .IgnoreQueryFilters() // مهم: اگر قبلاً Soft Delete شده
+                .Include(g => g.Users)
+                .FirstOrDefaultAsync(g => g.Id == id);
+
+            if (group == null)
+                return "گروه کاربری یافت نشد.";
+
+            if (group.IsDelete)
+                return "این گروه قبلاً غیرفعال شده است.";
+
+            bool hasActiveUsers = group.Users.Any(u => !u.IsDelete);
+            if (hasActiveUsers)
+                return "امکان حذف گروه کاربری به دلیل وجود کاربر فعال وجود ندارد.";
+
+            bool hasAccessLevel = await _context.Access_Level
+                .AnyAsync(a => a.GroupUserId == id);
+            if (hasAccessLevel)
+                return "امکان حذف گروه کاربری به دلیل وجود سطح دسترسی وابسته وجود ندارد.";
+
+            group.IsDelete = true;
+
+            await _context.LogUser.AddAsync(new LogUser
             {
-                _logger.LogInformation("درخواست حذف گروه کاربری با ID: {Id}", id);
-                var entity = await _context.Group_User.FindAsync(id);
+                Description = $"غیرفعال‌سازی گروه کاربری «{group.Name}»",
+                UserId = UserId,
+                Date = DateTime.UtcNow
+            });
 
-                if (entity == null)
-                    return "گروه کاربری مورد نظر یافت نشد.";
-
-                if (entity.IsDelete == false)
-                    return "امکان حذف این گروه کاربری وجود ندارد.";
-
-                bool hasRelatedAccounts = await _context.Access_Level.AnyAsync(a => a.GroupUserId == id);
-                if (hasRelatedAccounts)
-                    return "امکان حذف این گروه کاربری به دلیل وجود حساب‌های وابسته وجود ندارد.";
-
-                // ثبت لاگ
-                await _context.LogUser.AddAsync(new BusinessEntity.Settings.LogUser
-                {
-                    Description = $"حذف گروه کاربری با نام {entity.Name}",
-                    UserId = userId,
-                    Date = DateTime.UtcNow
-                });
-
-                _context.Group_User.Remove(entity);
-                await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
-
-                _logger.LogInformation("گروه کاربری با موفقیت حذف شد. ID: {Id}", id);
-                return "عملیات با موفقیت انجام شد.";
-            }
-            catch (Exception ex)
-            {
-                await transaction.RollbackAsync();
-                _logger.LogError(ex, "خطا در حذف گروه کاربری با ID: {Id}", id);
-                return "خطایی در عملیات حذف رخ داد. لطفاً با پشتیبانی تماس بگیرید.";
-            }
+            await _context.SaveChangesAsync();
+            return "عملیات با موفقیت انجام شد.";
         }
+
     }
 }

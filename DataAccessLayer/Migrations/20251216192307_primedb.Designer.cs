@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(Database))]
-    [Migration("20251109180042_UPDATE7")]
-    partial class UPDATE7
+    [Migration("20251216192307_primedb")]
+    partial class primedb
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -240,6 +240,45 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("Pay_To_Bank");
                 });
 
+            modelBuilder.Entity("BusinessEntity.Customer_Club.Customer", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("Britday")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Family")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Phone")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("PriceLevelId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("PriceLevelsId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Score")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PriceLevelsId");
+
+                    b.ToTable("Customer");
+                });
+
             modelBuilder.Entity("BusinessEntity.Financial_Operations.Account", b =>
                 {
                     b.Property<int>("AccountId")
@@ -258,6 +297,9 @@ namespace DataAccessLayer.Migrations
 
                     b.Property<decimal>("Balance")
                         .HasColumnType("numeric(18,2)");
+
+                    b.Property<bool>("IsDelete")
+                        .HasColumnType("boolean");
 
                     b.HasKey("AccountId");
 
@@ -433,6 +475,9 @@ namespace DataAccessLayer.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime>("Date")
                         .HasColumnType("timestamp with time zone");
 
@@ -465,6 +510,8 @@ namespace DataAccessLayer.Migrations
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CustomerId");
 
                     b.HasIndex("PeopleId");
 
@@ -593,6 +640,9 @@ namespace DataAccessLayer.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<bool>("IsCreditLimit")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDelete")
                         .HasColumnType("boolean");
 
                     b.Property<string>("LastName")
@@ -888,6 +938,9 @@ namespace DataAccessLayer.Migrations
                     b.Property<int>("ProductFailureId")
                         .HasColumnType("integer");
 
+                    b.Property<int?>("ProductId")
+                        .HasColumnType("integer");
+
                     b.Property<int>("StoreroomId")
                         .HasColumnType("integer");
 
@@ -905,6 +958,8 @@ namespace DataAccessLayer.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ProductFailureId");
+
+                    b.HasIndex("ProductId");
 
                     b.HasIndex("Storeroom_ProductId");
 
@@ -949,6 +1004,9 @@ namespace DataAccessLayer.Migrations
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<bool>("IsDelete")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -1063,6 +1121,9 @@ namespace DataAccessLayer.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<bool>("IsBankT")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDelete")
                         .HasColumnType("boolean");
 
                     b.Property<bool>("IsFund")
@@ -1353,6 +1414,17 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("People");
                 });
 
+            modelBuilder.Entity("BusinessEntity.Customer_Club.Customer", b =>
+                {
+                    b.HasOne("BusinessEntity.Product.PriceLevels", "PriceLevels")
+                        .WithMany()
+                        .HasForeignKey("PriceLevelsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("PriceLevels");
+                });
+
             modelBuilder.Entity("BusinessEntity.Financial_Operations.Transaction", b =>
                 {
                     b.HasOne("BusinessEntity.Financial_Operations.Account", "Account")
@@ -1413,17 +1485,25 @@ namespace DataAccessLayer.Migrations
 
             modelBuilder.Entity("BusinessEntity.Invoices.Invoices", b =>
                 {
+                    b.HasOne("BusinessEntity.Customer_Club.Customer", "Customer")
+                        .WithMany("Invoices")
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("BusinessEntity.People.People", "People")
-                        .WithMany()
+                        .WithMany("Invoices")
                         .HasForeignKey("PeopleId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("BusinessEntity.Settings.User", "User")
-                        .WithMany()
+                        .WithMany("Invoices")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("Customer");
 
                     b.Navigation("People");
 
@@ -1439,9 +1519,9 @@ namespace DataAccessLayer.Migrations
                         .IsRequired();
 
                     b.HasOne("BusinessEntity.Product.Product", "Product")
-                        .WithMany()
+                        .WithMany("Invoices_Items")
                         .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Invoices");
@@ -1560,14 +1640,20 @@ namespace DataAccessLayer.Migrations
             modelBuilder.Entity("BusinessEntity.Product.Product_Failure_Item", b =>
                 {
                     b.HasOne("BusinessEntity.Product.Product_Failure", "ProductFailure")
-                        .WithMany("ProductFailureItem")
+                        .WithMany("ProductFailureItems")
                         .HasForeignKey("ProductFailureId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("BusinessEntity.Product.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId");
+
                     b.HasOne("BusinessEntity.Product.Storeroom_Product", "Storeroom_Product")
                         .WithMany()
                         .HasForeignKey("Storeroom_ProductId");
+
+                    b.Navigation("Product");
 
                     b.Navigation("ProductFailure");
 
@@ -1617,7 +1703,7 @@ namespace DataAccessLayer.Migrations
                     b.HasOne("BusinessEntity.Settings.Group_User", "Group_User")
                         .WithOne("AccessLevel")
                         .HasForeignKey("BusinessEntity.Settings.Access_Level", "GroupUserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Group_User");
@@ -1635,7 +1721,7 @@ namespace DataAccessLayer.Migrations
                     b.HasOne("BusinessEntity.Settings.User", "User")
                         .WithMany("LogUser")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("User");
@@ -1646,7 +1732,7 @@ namespace DataAccessLayer.Migrations
                     b.HasOne("BusinessEntity.Settings.User", "User")
                         .WithMany("Reminders")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("User");
@@ -1663,7 +1749,7 @@ namespace DataAccessLayer.Migrations
                     b.HasOne("BusinessEntity.People.People", "People")
                         .WithMany("Users")
                         .HasForeignKey("PeopleId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Group_User");
@@ -1674,6 +1760,11 @@ namespace DataAccessLayer.Migrations
             modelBuilder.Entity("BusinessEntity.Bank.Definition_Bank", b =>
                 {
                     b.Navigation("BankAccounts");
+                });
+
+            modelBuilder.Entity("BusinessEntity.Customer_Club.Customer", b =>
+                {
+                    b.Navigation("Invoices");
                 });
 
             modelBuilder.Entity("BusinessEntity.Financial_Operations.Account", b =>
@@ -1703,6 +1794,8 @@ namespace DataAccessLayer.Migrations
 
             modelBuilder.Entity("BusinessEntity.People.People", b =>
                 {
+                    b.Navigation("Invoices");
+
                     b.Navigation("Storeroom_Product");
 
                     b.Navigation("Users");
@@ -1727,12 +1820,14 @@ namespace DataAccessLayer.Migrations
 
             modelBuilder.Entity("BusinessEntity.Product.Product", b =>
                 {
+                    b.Navigation("Invoices_Items");
+
                     b.Navigation("Units");
                 });
 
             modelBuilder.Entity("BusinessEntity.Product.Product_Failure", b =>
                 {
-                    b.Navigation("ProductFailureItem");
+                    b.Navigation("ProductFailureItems");
                 });
 
             modelBuilder.Entity("BusinessEntity.Product.Section_Product", b =>
@@ -1781,6 +1876,8 @@ namespace DataAccessLayer.Migrations
             modelBuilder.Entity("BusinessEntity.Settings.User", b =>
                 {
                     b.Navigation("CashRegisters");
+
+                    b.Navigation("Invoices");
 
                     b.Navigation("LogUser");
 

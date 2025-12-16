@@ -18,5 +18,7 @@ namespace BusinessEntity.Customer_Club
         public Product.PriceLevels PriceLevels { get; set; } = null!;
 
         public int Score {  get; set; }
+
+        public ICollection<BusinessEntity.Invoices.Invoices> Invoices { get; set; } = new List<BusinessEntity.Invoices.Invoices>();
     }
 }

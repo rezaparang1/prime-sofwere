@@ -14,6 +14,7 @@ namespace BusinessEntity.Invoices
      
         public int ProductId { get; set; }
         public Product.Product? Product { get; set; } = null!;
+
         public string Barcode { get; set; } = string.Empty;
         [MaxLength(200)]
         public string Name { get; set; } = string.Empty;

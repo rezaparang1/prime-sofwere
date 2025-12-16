@@ -240,47 +240,47 @@ namespace DataAccessLayer.Repository.People
         }
         public async Task<string> Delete(int userId, int id)
         {
-            await using var transaction = await _context.Database.BeginTransactionAsync();
-            try
+            var entity = await _context.People
+                .Include(p => p.Users)
+                .Include(p => p.Account)
+                .IgnoreQueryFilters() // در صورتی که قبلاً حذف شده
+                .FirstOrDefaultAsync(p => p.Id == id);
+
+            if (entity == null)
+                return "رکورد مورد نظر یافت نشد.";
+
+            if (entity.IsDelete)
+                return "این شخص قبلاً غیرفعال شده است.";
+
+            // چک User وابسته
+            if (entity.Users.Any(u => !u.IsDelete))
+                return "امکان حذف شخص وجود ندارد، زیرا کاربر فعال برای آن ثبت شده است.";
+
+            // چک تراکنش‌های مالی
+            bool hasTransaction = await _context.Transaction
+                .AnyAsync(t => t.AccountId == entity.AccountId);
+            if (hasTransaction)
+                return "امکان حذف شخص وجود ندارد، زیرا تراکنش‌های مالی برای آن ثبت شده است.";
+
+            // Soft Delete حساب مالی
+            if (entity.Account != null)
+                entity.Account.IsDelete = true;
+
+            // Soft Delete شخص
+            entity.IsDelete = true;
+
+            // ثبت لاگ
+            await _context.LogUser.AddAsync(new BusinessEntity.Settings.LogUser
             {
-                var entity = await _context.People
-                    .Include(p => p.Account)
-                    .FirstOrDefaultAsync(p => p.Id == id);
+                Description = $"غیرفعال‌سازی شخص ({entity.FirstName} {entity.LastName}) و حساب مالی مرتبط",
+                UserId = userId,
+                Date = DateTime.UtcNow
+            });
 
-                if (entity == null)
-                    return "رکورد مورد نظر یافت نشد.";
+            await _context.SaveChangesAsync();
 
-                bool hasTransaction = await _context.Transaction
-                    .AnyAsync(t => t.AccountId == entity.AccountId);
-                if (hasTransaction)
-                    return "امکان حذف شخص وجود ندارد، زیرا تراکنش‌های مالی برای آن ثبت شده است.";
-
-                if (entity.Account != null)
-                    _context.Account.Remove(entity.Account);
-
-                _context.People.Remove(entity);
-
-                await _context.LogUser.AddAsync(new BusinessEntity.Settings.LogUser
-                {
-                    Description = $"حذف شخص ({entity.FirstName} {entity.LastName}) و حساب مالی مرتبط",
-                    UserId = userId,
-                    Date = DateTime.UtcNow
-                });
-
-                await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
-
-                return "عملیات با موفقیت انجام شد.";
-            }
-            catch (Exception ex)
-            {
-                await transaction.RollbackAsync();
-                _logger.LogError(ex, "خطا در حذف شخص با شناسه {Id}", id);
-                return $"خطایی در حذف رخ داد: {ex.Message}";
-            }
+            return "عملیات با موفقیت انجام شد.";
         }
 
-
     }
-
 }

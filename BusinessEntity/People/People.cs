@@ -41,6 +41,7 @@ namespace BusinessEntity.People
         public int InitialCapital { get; set; }
         public long Inventory { get; set; }    
         public int GroupPeopleId { get; set; }
+        public bool IsDelete { get; set; }
         public Group_People? Group_People { get; set; } = null!;   
         public int PriceLevelID { get; set; }
         public Product.PriceLevels? PriceLevel { get; set; } = null!;
@@ -48,5 +49,6 @@ namespace BusinessEntity.People
         public Financial_Operations.Account? Account { get; set; } = null!;
         public ICollection<User> Users { get; set; } = new List<User>();
         public ICollection<Product.Storeroom_Product> Storeroom_Product { get; set; } = new List<Product.Storeroom_Product>();
+        public ICollection<BusinessEntity.Invoices.Invoices> Invoices { get; set; } = new List<BusinessEntity.Invoices.Invoices>();
     }
 }

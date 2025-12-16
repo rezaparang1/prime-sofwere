@@ -24,36 +24,40 @@ namespace DataAccessLayer.Repository
         public async Task SeedAsync()
         {
             await _db.Database.MigrateAsync();
-
-            if (await _db.Set<User>().AnyAsync())
-            {
-                _logger.LogInformation("Database already seeded.");
-                return;
-            }
-
             _logger.LogInformation("Seeding initial data...");
 
             // -----------------------
             // گروه کاربری
             // -----------------------
             var groupUser = await _db.Set<BusinessEntity.Settings.Group_User>()
-                .FirstOrDefaultAsync(g => g.Name == "مدیر")
-                ?? new BusinessEntity.Settings.Group_User { Name = "مدیر", IsDelete = false };
-            if (_db.Entry(groupUser).State == EntityState.Detached)
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(g => g.Name == "مدیر");
+
+            if (groupUser != null)
+                groupUser.IsDelete = false;
+            else
+            {
+                groupUser = new BusinessEntity.Settings.Group_User { Name = "مدیر", IsDelete = false };
                 _db.Add(groupUser);
+            }
 
             // -----------------------
             // نوع محصولات
             // -----------------------
             var productTypes = new[]
             {
-            new BusinessEntity.Product.Type_Product { Name = "کالا", IsDelete = false },
-            new BusinessEntity.Product.Type_Product { Name = "خدمات", IsDelete = false },
-            new BusinessEntity.Product.Type_Product { Name = "دارایی های ثابت", IsDelete = false }
-        };
+            "کالا", "خدمات", "دارایی های ثابت"
+        }.Select(name => new BusinessEntity.Product.Type_Product { Name = name, IsDelete = false }).ToList();
+
             foreach (var pt in productTypes)
             {
-                if (!await _db.Set<BusinessEntity.Product.Type_Product>().AnyAsync(x => x.Name == pt.Name))
+                var existing = await _db.Set<BusinessEntity.Product.Type_Product>()
+                    .IgnoreQueryFilters()
+                    .FirstOrDefaultAsync(x => x.Name == pt.Name);
+
+                if (existing != null)
+                    existing.IsDelete = false;
+                else
                     _db.Add(pt);
             }
 
@@ -61,126 +65,171 @@ namespace DataAccessLayer.Repository
             // گروه محصول
             // -----------------------
             var groupProduct = await _db.Set<BusinessEntity.Product.Group_Product>()
-                .FirstOrDefaultAsync(g => g.Name == "پیش فرض")
-                ?? new BusinessEntity.Product.Group_Product { Name = "پیش فرض", IsDelete = false };
-            if (_db.Entry(groupProduct).State == EntityState.Detached)
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(g => g.Name == "پیش فرض");
+
+            if (groupProduct != null)
+                groupProduct.IsDelete = false;
+            else
+            {
+                groupProduct = new BusinessEntity.Product.Group_Product { Name = "پیش فرض", IsDelete = false };
                 _db.Add(groupProduct);
+            }
 
             // -----------------------
             // واحدهای محصول
             // -----------------------
-            var unitProducts = new[]
+            var unitNames = new[] { "عدد", "بسته", "کیلوگرم", "متر", "مثقال", "کارتن", "پرس", "شل", "متر مربع", "تن", "شاخه", "ورق" };
+            foreach (var name in unitNames)
             {
-            "عدد","بسته","کیلوگرم","متر","مثقال","کارتن","پرس","شل","متر مربع","تن","شاخه","ورق"
-        }.Select(u => new BusinessEntity.Product.Unit_Product { Name = u, IsDelete = false }).ToList();
-
-            foreach (var u in unitProducts)
-            {
-                if (!await _db.Set<BusinessEntity.Product.Unit_Product>().AnyAsync(x => x.Name == u.Name))
-                    _db.Add(u);
+                var unit = await _db.Set<BusinessEntity.Product.Unit_Product>()
+                    .IgnoreQueryFilters()
+                    .FirstOrDefaultAsync(u => u.Name == name);
+                if (unit != null)
+                    unit.IsDelete = false;
+                else
+                    _db.Add(new BusinessEntity.Product.Unit_Product { Name = name, IsDelete = false });
             }
 
             // -----------------------
             // بخش محصول
             // -----------------------
             var sectionProduct = await _db.Set<BusinessEntity.Product.Section_Product>()
-                .FirstOrDefaultAsync(s => s.Name == "پیش فرض")
-                ?? new BusinessEntity.Product.Section_Product { Name = "پیش فرض", IsDelete = false };
-            if (_db.Entry(sectionProduct).State == EntityState.Detached)
-                _db.Add(sectionProduct);
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(s => s.Name == "پیش فرض");
+
+            if (sectionProduct != null)
+                sectionProduct.IsDelete = false;
+            else
+                _db.Add(new BusinessEntity.Product.Section_Product { Name = "پیش فرض", IsDelete = false });
 
             // -----------------------
             // سطوح قیمت
             // -----------------------
-            var priceLevels = new[]
+            var priceLevelsNames = new[] { "مشتری", "همکار", "دوستان" };
+            var priceLevels = new List<BusinessEntity.Product.PriceLevels>();
+            foreach (var name in priceLevelsNames)
             {
-            "مشتری","همکار","دوستان"
-        }.Select(p => new BusinessEntity.Product.PriceLevels { Name = p, IsDelete = false }).ToList();
-            foreach (var p in priceLevels)
-            {
-                if (!await _db.Set<BusinessEntity.Product.PriceLevels>().AnyAsync(x => x.Name == p.Name))
-                    _db.Add(p);
+                var pl = await _db.Set<BusinessEntity.Product.PriceLevels>()
+                    .IgnoreQueryFilters()
+                    .FirstOrDefaultAsync(p => p.Name == name);
+                if (pl != null)
+                {
+                    pl.IsDelete = false;
+                    priceLevels.Add(pl);
+                }
+                else
+                {
+                    pl = new BusinessEntity.Product.PriceLevels { Name = name, IsDelete = false };
+                    _db.Add(pl);
+                    priceLevels.Add(pl);
+                }
             }
 
             // -----------------------
             // گروه و نوع اشخاص
             // -----------------------
             var groupPeople = await _db.Set<BusinessEntity.People.Group_People>()
-                .FirstOrDefaultAsync(g => g.Name == "پیش فرض")
-                ?? new BusinessEntity.People.Group_People { Name = "پیش فرض", IsDelete = false };
-            if (_db.Entry(groupPeople).State == EntityState.Detached)
-                _db.Add(groupPeople);
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(g => g.Name == "پیش فرض");
+
+            if (groupPeople != null)
+                groupPeople.IsDelete = false;
+            else
+                _db.Add(new BusinessEntity.People.Group_People { Name = "پیش فرض", IsDelete = false });
 
             var typePeople1 = await _db.Set<BusinessEntity.People.Type_People>()
-                .FirstOrDefaultAsync(t => t.Name == "حقیقی")
-                ?? new BusinessEntity.People.Type_People { Name = "حقیقی", IsDelete = false };
-            if (_db.Entry(typePeople1).State == EntityState.Detached)
-                _db.Add(typePeople1);
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(t => t.Name == "حقیقی");
+            if (typePeople1 != null)
+                typePeople1.IsDelete = false;
+            else
+                _db.Add(new BusinessEntity.People.Type_People { Name = "حقیقی", IsDelete = false });
 
             var typePeople2 = await _db.Set<BusinessEntity.People.Type_People>()
-                .FirstOrDefaultAsync(t => t.Name == "حقوقی")
-                ?? new BusinessEntity.People.Type_People { Name = "حقوقی", IsDelete = false };
-            if (_db.Entry(typePeople2).State == EntityState.Detached)
-                _db.Add(typePeople2);
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(t => t.Name == "حقوقی");
+            if (typePeople2 != null)
+                typePeople2.IsDelete = false;
+            else
+                _db.Add(new BusinessEntity.People.Type_People { Name = "حقوقی", IsDelete = false });
 
             // -----------------------
             // بانک‌ها
             // -----------------------
-            var banksNames = new[] { "ملت", "ملی", "تجارت", "کشاورزی", "صادرات", "رفاه", "سامان", "پارسیان", "سپه", "مسکن" };
-            foreach (var name in banksNames)
+            var bankNames = new[] { "ملت", "ملی", "تجارت", "کشاورزی", "صادرات", "رفاه", "سامان", "پارسیان", "سپه", "مسکن" };
+            foreach (var name in bankNames)
             {
-                if (!await _db.Set<BusinessEntity.Bank.Definition_Bank>().AnyAsync(b => b.Name == name))
+                var bank = await _db.Set<BusinessEntity.Bank.Definition_Bank>()
+                    .IgnoreQueryFilters()
+                    .FirstOrDefaultAsync(b => b.Name == name);
+                if (bank != null)
+                    bank.IsDelete = false;
+                else
                     _db.Add(new BusinessEntity.Bank.Definition_Bank { Name = name, IsDelete = false });
             }
 
-            await _db.SaveChangesAsync(); // ذخیره همه parentها قبل از FKها
+            await _db.SaveChangesAsync(); // ذخیره Parentها
 
             // -----------------------
             // Account و Fund
             // -----------------------
             var fundAccount = await _db.Set<BusinessEntity.Financial_Operations.Account>()
-                .FirstOrDefaultAsync(a => a.AccountName == "مدیر")
-                ?? new BusinessEntity.Financial_Operations.Account
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(a => a.AccountName == "مدیر");
+            if (fundAccount != null)
+                fundAccount.IsDelete = false;
+            else
+                _db.Add(new BusinessEntity.Financial_Operations.Account
                 {
                     AccountName = "مدیر",
                     AccountType = "CashBox",
-                    Balance = 0
-                };
-
-            if (_db.Entry(fundAccount).State == EntityState.Detached)
-                _db.Add(fundAccount);
+                    Balance = 0,
+                    IsDelete = false
+                });
 
             var fund = await _db.Set<BusinessEntity.Fund.Fund>()
-                .FirstOrDefaultAsync(f => f.Name == "مدیر")
-                ?? new BusinessEntity.Fund.Fund
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(f => f.Name == "مدیر");
+            if (fund != null)
+                fund.IsDelete = false;
+            else
+                _db.Add(new BusinessEntity.Fund.Fund
                 {
                     Name = "مدیر",
                     FirstInventory = 0,
                     Inventory = 0,
-                    IsDelete = false,
                     NegativeBalancePolicy = BusinessEntity.Fund.NegativeBalancePolicy.No,
-                    Account = fundAccount
-                };
-            if (_db.Entry(fund).State == EntityState.Detached)
-                _db.Add(fund);
+                    Account = fundAccount,
+                    IsDelete = false
+                });
 
             // -----------------------
             // Account و People
             // -----------------------
             var peopleAccount = await _db.Set<BusinessEntity.Financial_Operations.Account>()
-                .FirstOrDefaultAsync(a => a.AccountName == "مشتری پیش فرض")
-                ?? new BusinessEntity.Financial_Operations.Account
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(a => a.AccountName == "مشتری پیش فرض");
+
+            if (peopleAccount != null)
+                peopleAccount.IsDelete = false;
+            else
+                _db.Add(new BusinessEntity.Financial_Operations.Account
                 {
                     AccountName = "مشتری پیش فرض",
                     AccountType = "People",
-                    Balance = 0
-                };
-            if (_db.Entry(peopleAccount).State == EntityState.Detached)
-                _db.Add(peopleAccount);
+                    Balance = 0,
+                    IsDelete = false
+                });
 
             var people = await _db.Set<BusinessEntity.People.People>()
-                .FirstOrDefaultAsync(p => p.IdPeople == "1")
-                ?? new BusinessEntity.People.People
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(p => p.IdPeople == "1");
+
+            if (people != null)
+                people.IsDelete = false;
+            else
+                _db.Add(new BusinessEntity.People.People
                 {
                     IdPeople = "1",
                     FirstName = "مشتری",
@@ -199,78 +248,97 @@ namespace DataAccessLayer.Repository
                     Inventory = 0,
                     Group_People = groupPeople,
                     PriceLevel = priceLevels[0],
-                    Account = peopleAccount
-                };
-            if (_db.Entry(people).State == EntityState.Detached)
-                _db.Add(people);
+                    Account = peopleAccount,
+                    IsDelete = false
+                });
 
             // -----------------------
             // انبار
             // -----------------------
             var anbarProduct = await _db.Set<BusinessEntity.Product.Storeroom_Product>()
-                .FirstOrDefaultAsync(a => a.Name == "پیش فرض")
-                ?? new BusinessEntity.Product.Storeroom_Product
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(a => a.Name == "پیش فرض");
+
+            if (anbarProduct != null)
+                anbarProduct.IsDelete = false;
+            else
+                _db.Add(new BusinessEntity.Product.Storeroom_Product
                 {
                     Section_Product = sectionProduct,
                     Name = "پیش فرض",
                     People = people,
                     Description = "انبار مرکزی",
-                    NegativeBalancePolicy = BusinessEntity.Product.NegativeBalancePolicy.No
-                };
-            if (_db.Entry(anbarProduct).State == EntityState.Detached)
-                _db.Add(anbarProduct);
+                    NegativeBalancePolicy = BusinessEntity.Product.NegativeBalancePolicy.No,
+                    IsDelete = false
+                });
 
             // -----------------------
             // دسترسی‌ها
             // -----------------------
-            var access = new Access_Level
-            {
-                Group_User = groupUser,
-                IsBankT = true,
-                IsBank = true,
-                IsFund = true,
-                IsWorkShift = true,
-                IsRegisterUser = true,
-                IsInvoices = true,
-                IsPeople = true,
-                IsGroupPeople = true,
-                IsTypePeopel = true,
-                IsGroupProduct = true,
-                IsPriceLevel = true,
-                IsProductFailre = true,
-                IsProduct = true,
-                IsSectionProduct = true,
-                IsTypeProduct = true,
-                IsStoreroomProduct = true,
-                IsUnitProduct = true,
-                IsGroupUser = true,
-                IsUser = true,
-                IsAccessLevel = true,
-                IsViewingofOthers = true
-            };
-            _db.Add(access);
+            var access = await _db.Set<BusinessEntity.Settings.Access_Level>()
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(a => a.GroupUserId == groupUser.Id);
+
+            if (access != null)
+                access.IsDelete = false;
+            else
+                _db.Add(new BusinessEntity.Settings.Access_Level
+                {
+                    Group_User = groupUser,
+                    IsBankT = true,
+                    IsBank = true,
+                    IsFund = true,
+                    IsWorkShift = true,
+                    IsRegisterUser = true,
+                    IsInvoices = true,
+                    IsPeople = true,
+                    IsGroupPeople = true,
+                    IsTypePeopel = true,
+                    IsGroupProduct = true,
+                    IsPriceLevel = true,
+                    IsProductFailre = true,
+                    IsProduct = true,
+                    IsSectionProduct = true,
+                    IsTypeProduct = true,
+                    IsStoreroomProduct = true,
+                    IsUnitProduct = true,
+                    IsGroupUser = true,
+                    IsUser = true,
+                    IsAccessLevel = true,
+                    IsViewingofOthers = true,
+                    IsDelete = false
+                });
 
             // -----------------------
             // کاربر admin
             // -----------------------
             var admin = await _db.Set<User>()
-                .FirstOrDefaultAsync(u => u.UserName == "admin")
-                ?? new User
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(u => u.UserName == "admin");
+
+            if (admin != null)
+            {
+                admin.IsDelete = false;
+                admin.IsActive = true;
+                admin.Group_User = groupUser;
+                admin.People = people;
+            }
+            else
+                _db.Add(new User
                 {
-                    People = people,
                     UserName = "admin",
                     Password = PasswordHasher.Hash("123456"),
+                    Group_User = groupUser,
+                    People = people,
                     IsDelete = false,
-                    IsActive = true,
-                    Group_User = groupUser
-                };
-            if (_db.Entry(admin).State == EntityState.Detached)
-                _db.Add(admin);
+                    IsActive = true
+                });
 
             await _db.SaveChangesAsync();
 
             _logger.LogInformation("Seeding completed. Admin user: admin / 123456, Bank: ملت, Fund: صندوق اصلی");
         }
     }
+
 
 }

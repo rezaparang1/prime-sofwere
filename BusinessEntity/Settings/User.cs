@@ -38,6 +38,7 @@ namespace BusinessEntity.Settings
         public ICollection<Cash_Register_To_The_User> CashRegisters { get; set; }
             = new List<Cash_Register_To_The_User>();
 
+        public ICollection<BusinessEntity.Invoices.Invoices> Invoices { get; set; } = new List<BusinessEntity.Invoices.Invoices>();
         public ICollection<LogUser> LogUser { get; set; } = new List<LogUser>();
         public ICollection<Reminder> Reminders { get; set; } = new List<Reminder>();
     }

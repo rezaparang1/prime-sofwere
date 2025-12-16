@@ -13,7 +13,7 @@ namespace BusinessEntity.Financial_Operations
         public string AccountName { get; set; } = string.Empty; // مثلاً: بانک ملت، صندوق اصلی
         public string AccountType { get; set; } = string.Empty; // Bank / CashBox / Other
         public decimal Balance { get; set; }
-
+        public bool IsDelete { get; set; } 
         public ICollection<Transaction> Transactions { get; set; } = new List<Transaction>();
     }
 }

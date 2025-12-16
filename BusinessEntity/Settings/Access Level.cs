@@ -33,6 +33,7 @@ namespace BusinessEntity.Settings
         public bool IsUser { get; set; }
         public bool IsAccessLevel { get; set; }
         public bool IsViewingofOthers { get; set; }
+        public bool IsDelete { get; set; }
         public ICollection<Group_User> Groups { get; set; } = new List<Group_User>();
 
     }

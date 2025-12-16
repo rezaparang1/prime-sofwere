@@ -20,7 +20,8 @@ namespace DataAccessLayer.Migrations
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     AccountName = table.Column<string>(type: "text", nullable: false),
                     AccountType = table.Column<string>(type: "text", nullable: false),
-                    Balance = table.Column<decimal>(type: "numeric(18,2)", nullable: false)
+                    Balance = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
+                    IsDelete = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -217,6 +218,31 @@ namespace DataAccessLayer.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Customer",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Name = table.Column<string>(type: "text", nullable: false),
+                    Family = table.Column<string>(type: "text", nullable: false),
+                    Phone = table.Column<string>(type: "text", nullable: false),
+                    Britday = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    PriceLevelId = table.Column<int>(type: "integer", nullable: false),
+                    PriceLevelsId = table.Column<int>(type: "integer", nullable: false),
+                    Score = table.Column<int>(type: "integer", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Customer", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Customer_PriceLevels_PriceLevelsId",
+                        column: x => x.PriceLevelsId,
+                        principalTable: "PriceLevels",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "People",
                 columns: table => new
                 {
@@ -241,6 +267,7 @@ namespace DataAccessLayer.Migrations
                     InitialCapital = table.Column<int>(type: "integer", nullable: false),
                     Inventory = table.Column<long>(type: "bigint", nullable: false),
                     GroupPeopleId = table.Column<int>(type: "integer", nullable: false),
+                    IsDelete = table.Column<bool>(type: "boolean", nullable: false),
                     PriceLevelID = table.Column<int>(type: "integer", nullable: false),
                     AccountId = table.Column<int>(type: "integer", nullable: false)
                 },
@@ -381,6 +408,7 @@ namespace DataAccessLayer.Migrations
                     PeopleId = table.Column<int>(type: "integer", nullable: false),
                     Description = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
                     Address = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    IsDelete = table.Column<bool>(type: "boolean", nullable: false),
                     NegativeBalancePolicy = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
@@ -476,6 +504,7 @@ namespace DataAccessLayer.Migrations
                     Storeroom_ProductId = table.Column<int>(type: "integer", nullable: true),
                     Value = table.Column<int>(type: "integer", nullable: false),
                     Description = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    ProductId = table.Column<int>(type: "integer", nullable: true),
                     ProductFailureId = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
@@ -487,6 +516,11 @@ namespace DataAccessLayer.Migrations
                         principalTable: "Product_Failure",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Product_Failure_Item_Product_ProductId",
+                        column: x => x.ProductId,
+                        principalTable: "Product",
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_Product_Failure_Item_Storeroom_Product_Storeroom_ProductId",
                         column: x => x.Storeroom_ProductId,
@@ -598,7 +632,8 @@ namespace DataAccessLayer.Migrations
                     IsGroupUser = table.Column<bool>(type: "boolean", nullable: false),
                     IsUser = table.Column<bool>(type: "boolean", nullable: false),
                     IsAccessLevel = table.Column<bool>(type: "boolean", nullable: false),
-                    IsViewingofOthers = table.Column<bool>(type: "boolean", nullable: false)
+                    IsViewingofOthers = table.Column<bool>(type: "boolean", nullable: false),
+                    IsDelete = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -634,6 +669,7 @@ namespace DataAccessLayer.Migrations
                     PeopleId = table.Column<int>(type: "integer", nullable: false),
                     UserName = table.Column<string>(type: "character varying(30)", maxLength: 30, nullable: false),
                     Password = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    LastActivity = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     IsDelete = table.Column<bool>(type: "boolean", nullable: false),
                     IsActive = table.Column<bool>(type: "boolean", nullable: false),
                     Validity = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
@@ -655,7 +691,7 @@ namespace DataAccessLayer.Migrations
                         column: x => x.PeopleId,
                         principalTable: "People",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -700,6 +736,7 @@ namespace DataAccessLayer.Migrations
                     OffAll = table.Column<int>(type: "integer", nullable: false),
                     TotalSum = table.Column<int>(type: "integer", nullable: false),
                     IsUpdate = table.Column<bool>(type: "boolean", nullable: false),
+                    CustomerId = table.Column<int>(type: "integer", nullable: false),
                     UserId = table.Column<int>(type: "integer", nullable: false),
                     TyepPay = table.Column<int>(type: "integer", nullable: false),
                     TypeInvoices = table.Column<int>(type: "integer", nullable: false)
@@ -708,17 +745,23 @@ namespace DataAccessLayer.Migrations
                 {
                     table.PrimaryKey("PK_Invoices", x => x.Id);
                     table.ForeignKey(
+                        name: "FK_Invoices_Customer_CustomerId",
+                        column: x => x.CustomerId,
+                        principalTable: "Customer",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
                         name: "FK_Invoices_People_PeopleId",
                         column: x => x.PeopleId,
                         principalTable: "People",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_Invoices_User_UserId",
                         column: x => x.UserId,
                         principalTable: "User",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -739,7 +782,7 @@ namespace DataAccessLayer.Migrations
                         column: x => x.UserId,
                         principalTable: "User",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -760,7 +803,7 @@ namespace DataAccessLayer.Migrations
                         column: x => x.UserId,
                         principalTable: "User",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -774,6 +817,7 @@ namespace DataAccessLayer.Migrations
                     EndTime = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     OpeningAmount = table.Column<long>(type: "bigint", nullable: false),
                     ClosingAmount = table.Column<long>(type: "bigint", nullable: false),
+                    IsAuto = table.Column<bool>(type: "boolean", nullable: false),
                     IsClosed = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
@@ -784,7 +828,7 @@ namespace DataAccessLayer.Migrations
                         column: x => x.CashRegisterToUserId,
                         principalTable: "Cash_Register_To_The_User",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -816,7 +860,7 @@ namespace DataAccessLayer.Migrations
                         column: x => x.ProductId,
                         principalTable: "Product",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -892,14 +936,17 @@ namespace DataAccessLayer.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_Cash_Register_To_The_User_FundId",
                 table: "Cash_Register_To_The_User",
-                column: "FundId",
-                unique: true);
+                column: "FundId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Cash_Register_To_The_User_UserId",
                 table: "Cash_Register_To_The_User",
-                column: "UserId",
-                unique: true);
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Customer_PriceLevelsId",
+                table: "Customer",
+                column: "PriceLevelsId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_definition_bank_account_AccountId",
@@ -920,6 +967,11 @@ namespace DataAccessLayer.Migrations
                 name: "IX_Group_User_Access_LevelId",
                 table: "Group_User",
                 column: "Access_LevelId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Invoices_CustomerId",
+                table: "Invoices",
+                column: "CustomerId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Invoices_PeopleId",
@@ -1017,6 +1069,11 @@ namespace DataAccessLayer.Migrations
                 column: "ProductFailureId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Product_Failure_Item_ProductId",
+                table: "Product_Failure_Item",
+                column: "ProductId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Product_Failure_Item_Storeroom_ProductId",
                 table: "Product_Failure_Item",
                 column: "Storeroom_ProductId");
@@ -1098,7 +1155,7 @@ namespace DataAccessLayer.Migrations
                 column: "GroupUserId",
                 principalTable: "Group_User",
                 principalColumn: "Id",
-                onDelete: ReferentialAction.Cascade);
+                onDelete: ReferentialAction.Restrict);
         }
 
         /// <inheritdoc />
@@ -1149,6 +1206,9 @@ namespace DataAccessLayer.Migrations
 
             migrationBuilder.DropTable(
                 name: "Work_Shift");
+
+            migrationBuilder.DropTable(
+                name: "Customer");
 
             migrationBuilder.DropTable(
                 name: "definition_bank");

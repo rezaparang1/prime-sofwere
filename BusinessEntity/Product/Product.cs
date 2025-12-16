@@ -47,6 +47,7 @@ namespace BusinessEntity.Product
         public string ImagePath { get; set; } = string.Empty;
         public string ShortcutKey { get; set; } = string.Empty;
 
+        public ICollection<BusinessEntity.Invoices.Invoices_Item> Invoices_Items { get; set; } = new List<BusinessEntity.Invoices.Invoices_Item>();
         public ICollection<UnitsLevel> Units { get; set; } = new List<UnitsLevel>();
     }
 }

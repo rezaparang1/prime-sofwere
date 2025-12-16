@@ -20,6 +20,7 @@ namespace BusinessEntity.Product
         public string Description { get; set; } = String.Empty;
         [MaxLength(200)]
         public string Address { get; set; } = String.Empty;
+        public bool IsDelete { get; set; }
         public NegativeBalancePolicy NegativeBalancePolicy { get; set; } = NegativeBalancePolicy.No;
         public ICollection<Product> Products { get; set; } = new List<Product>();
     }
