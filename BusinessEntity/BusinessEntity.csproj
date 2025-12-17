@@ -6,4 +6,15 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Folder Include="DTO\Bank\" />
+    <Folder Include="DTO\Customer Club\" />
+    <Folder Include="DTO\Financial Operations\" />
+    <Folder Include="DTO\Fund\" />
+    <Folder Include="DTO\Invoices\" />
+    <Folder Include="DTO\Settings\" />
+    <Folder Include="DTO\Product\" />
+    <Folder Include="DTO\People\" />
+  </ItemGroup>
+
 </Project>

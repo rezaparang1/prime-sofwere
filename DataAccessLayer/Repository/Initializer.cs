@@ -40,14 +40,13 @@ namespace DataAccessLayer.Repository
                 groupUser = new BusinessEntity.Settings.Group_User { Name = "مدیر", IsDelete = false };
                 _db.Add(groupUser);
             }
+            await _db.SaveChangesAsync();
 
             // -----------------------
             // نوع محصولات
             // -----------------------
-            var productTypes = new[]
-            {
-            "کالا", "خدمات", "دارایی های ثابت"
-        }.Select(name => new BusinessEntity.Product.Type_Product { Name = name, IsDelete = false }).ToList();
+            var productTypes = new[] { "کالا", "خدمات", "دارایی های ثابت" }
+                .Select(name => new BusinessEntity.Product.Type_Product { Name = name, IsDelete = false }).ToList();
 
             foreach (var pt in productTypes)
             {
@@ -60,6 +59,7 @@ namespace DataAccessLayer.Repository
                 else
                     _db.Add(pt);
             }
+            await _db.SaveChangesAsync();
 
             // -----------------------
             // گروه محصول
@@ -75,6 +75,7 @@ namespace DataAccessLayer.Repository
                 groupProduct = new BusinessEntity.Product.Group_Product { Name = "پیش فرض", IsDelete = false };
                 _db.Add(groupProduct);
             }
+            await _db.SaveChangesAsync();
 
             // -----------------------
             // واحدهای محصول
@@ -90,6 +91,7 @@ namespace DataAccessLayer.Repository
                 else
                     _db.Add(new BusinessEntity.Product.Unit_Product { Name = name, IsDelete = false });
             }
+            await _db.SaveChangesAsync();
 
             // -----------------------
             // بخش محصول
@@ -102,6 +104,8 @@ namespace DataAccessLayer.Repository
                 sectionProduct.IsDelete = false;
             else
                 _db.Add(new BusinessEntity.Product.Section_Product { Name = "پیش فرض", IsDelete = false });
+
+            await _db.SaveChangesAsync();
 
             // -----------------------
             // سطوح قیمت
@@ -125,6 +129,7 @@ namespace DataAccessLayer.Repository
                     priceLevels.Add(pl);
                 }
             }
+            await _db.SaveChangesAsync();
 
             // -----------------------
             // گروه و نوع اشخاص
@@ -154,6 +159,8 @@ namespace DataAccessLayer.Repository
             else
                 _db.Add(new BusinessEntity.People.Type_People { Name = "حقوقی", IsDelete = false });
 
+            await _db.SaveChangesAsync();
+
             // -----------------------
             // بانک‌ها
             // -----------------------
@@ -168,45 +175,29 @@ namespace DataAccessLayer.Repository
                 else
                     _db.Add(new BusinessEntity.Bank.Definition_Bank { Name = name, IsDelete = false });
             }
-
-            await _db.SaveChangesAsync(); // ذخیره Parentها
+            await _db.SaveChangesAsync();
 
             // -----------------------
-            // Account و Fund
+            // Accountها
             // -----------------------
             var fundAccount = await _db.Set<BusinessEntity.Financial_Operations.Account>()
                 .IgnoreQueryFilters()
                 .FirstOrDefaultAsync(a => a.AccountName == "مدیر");
+
             if (fundAccount != null)
                 fundAccount.IsDelete = false;
             else
-                _db.Add(new BusinessEntity.Financial_Operations.Account
+            {
+                fundAccount = new BusinessEntity.Financial_Operations.Account
                 {
                     AccountName = "مدیر",
                     AccountType = "CashBox",
                     Balance = 0,
                     IsDelete = false
-                });
+                };
+                _db.Add(fundAccount);
+            }
 
-            var fund = await _db.Set<BusinessEntity.Fund.Fund>()
-                .IgnoreQueryFilters()
-                .FirstOrDefaultAsync(f => f.Name == "مدیر");
-            if (fund != null)
-                fund.IsDelete = false;
-            else
-                _db.Add(new BusinessEntity.Fund.Fund
-                {
-                    Name = "مدیر",
-                    FirstInventory = 0,
-                    Inventory = 0,
-                    NegativeBalancePolicy = BusinessEntity.Fund.NegativeBalancePolicy.No,
-                    Account = fundAccount,
-                    IsDelete = false
-                });
-
-            // -----------------------
-            // Account و People
-            // -----------------------
             var peopleAccount = await _db.Set<BusinessEntity.Financial_Operations.Account>()
                 .IgnoreQueryFilters()
                 .FirstOrDefaultAsync(a => a.AccountName == "مشتری پیش فرض");
@@ -214,14 +205,45 @@ namespace DataAccessLayer.Repository
             if (peopleAccount != null)
                 peopleAccount.IsDelete = false;
             else
-                _db.Add(new BusinessEntity.Financial_Operations.Account
+            {
+                peopleAccount = new BusinessEntity.Financial_Operations.Account
                 {
                     AccountName = "مشتری پیش فرض",
                     AccountType = "People",
                     Balance = 0,
                     IsDelete = false
-                });
+                };
+                _db.Add(peopleAccount);
+            }
 
+            await _db.SaveChangesAsync(); // Save Accounts قبل از Fund و People
+
+            // -----------------------
+            // Fund
+            // -----------------------
+            var fund = await _db.Set<BusinessEntity.Fund.Fund>()
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(f => f.Name == "مدیر");
+
+            if (fund != null)
+                fund.IsDelete = false;
+            else
+            {
+                fund = new BusinessEntity.Fund.Fund
+                {
+                    Name = "مدیر",
+                    FirstInventory = 0,
+                    Inventory = 0,
+                    NegativeBalancePolicy = BusinessEntity.Fund.NegativeBalancePolicy.No,
+                    Account = fundAccount,
+                    IsDelete = false
+                };
+                _db.Add(fund);
+            }
+
+            // -----------------------
+            // People
+            // -----------------------
             var people = await _db.Set<BusinessEntity.People.People>()
                 .IgnoreQueryFilters()
                 .FirstOrDefaultAsync(p => p.IdPeople == "1");
@@ -229,7 +251,8 @@ namespace DataAccessLayer.Repository
             if (people != null)
                 people.IsDelete = false;
             else
-                _db.Add(new BusinessEntity.People.People
+            {
+                people = new BusinessEntity.People.People
                 {
                     IdPeople = "1",
                     FirstName = "مشتری",
@@ -250,11 +273,19 @@ namespace DataAccessLayer.Repository
                     PriceLevel = priceLevels[0],
                     Account = peopleAccount,
                     IsDelete = false
-                });
+                };
+                _db.Add(people);
+            }
+
+            await _db.SaveChangesAsync();
 
             // -----------------------
             // انبار
             // -----------------------
+            var sectionProductDefault = await _db.Set<BusinessEntity.Product.Section_Product>()
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(s => s.Name == "پیش فرض");
+
             var anbarProduct = await _db.Set<BusinessEntity.Product.Storeroom_Product>()
                 .IgnoreQueryFilters()
                 .FirstOrDefaultAsync(a => a.Name == "پیش فرض");
@@ -264,13 +295,15 @@ namespace DataAccessLayer.Repository
             else
                 _db.Add(new BusinessEntity.Product.Storeroom_Product
                 {
-                    Section_Product = sectionProduct,
+                    Section_Product = sectionProductDefault,
                     Name = "پیش فرض",
                     People = people,
                     Description = "انبار مرکزی",
                     NegativeBalancePolicy = BusinessEntity.Product.NegativeBalancePolicy.No,
                     IsDelete = false
                 });
+
+            await _db.SaveChangesAsync();
 
             // -----------------------
             // دسترسی‌ها
@@ -309,6 +342,8 @@ namespace DataAccessLayer.Repository
                     IsDelete = false
                 });
 
+            await _db.SaveChangesAsync();
+
             // -----------------------
             // کاربر admin
             // -----------------------
@@ -324,6 +359,7 @@ namespace DataAccessLayer.Repository
                 admin.People = people;
             }
             else
+            {
                 _db.Add(new User
                 {
                     UserName = "admin",
@@ -333,12 +369,11 @@ namespace DataAccessLayer.Repository
                     IsDelete = false,
                     IsActive = true
                 });
+            }
 
             await _db.SaveChangesAsync();
 
             _logger.LogInformation("Seeding completed. Admin user: admin / 123456, Bank: ملت, Fund: صندوق اصلی");
         }
     }
-
-
 }
