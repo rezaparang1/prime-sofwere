@@ -3,6 +3,7 @@ using BusinessLogicLayer.DTO;
 using BusinessLogicLayer.Interface.Customer_Club;
 using BusinessLogicLayer.Interface.Invoices;
 using BusinessLogicLayer.Repository.Fund;
+using DataAccessLayer.Interface;
 using DataAccessLayer.Interface.Customer_Club;
 using Microsoft.Extensions.Logging;
 using System;
@@ -20,19 +21,22 @@ namespace BusinessLogicLayer.Repository.Invoices
         private readonly IClubDiscountService _clubDiscountService;
         private readonly IWalletService _walletService;
         private readonly ICustomerService _customerService;
+        private readonly ILogger<InvoiceService> _logger;
 
         public InvoiceService(
             IUnitOfWork unitOfWork,
             IPublicDiscountService publicDiscountService,
             IClubDiscountService clubDiscountService,
             IWalletService walletService,
-            ICustomerService customerService)
+            ICustomerService customerService,
+            ILogger<InvoiceService> logger)
         {
             _unitOfWork = unitOfWork;
             _publicDiscountService = publicDiscountService;
             _clubDiscountService = clubDiscountService;
             _walletService = walletService;
             _customerService = customerService;
+            _logger = logger;
         }
 
         public async Task<Result<InvoiceDto>> CreateInvoiceWithAllDiscountsAsync(InvoiceCreateDto dto)
@@ -82,60 +86,70 @@ namespace BusinessLogicLayer.Repository.Invoices
                 int totalLevelDiscount = 0;
                 int? appliedClubDiscountId = null;
 
-                // 3. پردازش آیتم‌ها
+                // 3. پردازش آیتم‌ها و کسر موجودی
                 foreach (var itemDto in dto.Items)
                 {
-                    // پیدا کردن واحد کالا با بارکد
-                    var barcodeEntity = await _unitOfWork.ProductBarcodes
-                        .GetByBarcodeAsync(itemDto.Barcode);
+                    var barcodeEntity = await _unitOfWork.ProductBarcodes.GetByBarcodeAsync(itemDto.Barcode);
                     if (barcodeEntity == null)
                         continue;
 
-                    var unitLevel = await _unitOfWork.UnitsLevels
-                        .GetByIdAsync(barcodeEntity.UnitLevelId);
+                    var unitLevel = await _unitOfWork.UnitsLevels.GetByIdAsync(barcodeEntity.ProductUnitId);
                     if (unitLevel == null)
                         continue;
 
-                    var product = await _unitOfWork.Products
-                        .GetByIdAsync(unitLevel.ProductId);
+                    var product = await _unitOfWork.Products.GetByIdAsync(unitLevel.ProductId);
                     if (product == null)
                         continue;
 
-                    // محاسبه قیمت واحد بر اساس سطح قیمتی خریدار
+                    // کسر موجودی با رعایت سیاست انبار
+                    var storeroom = await _unitOfWork.StoreroomProducts.GetByIdAsync(product.StoreroomProductId);
+                    if (storeroom == null)
+                        return Result<InvoiceDto>.Failure($"انبار محصول '{product.Name}' یافت نشد.");
+
+                    int newInventory = product.Inventory - itemDto.Quantity;
+                    switch (storeroom.NegativeBalancePolicy)
+                    {
+                        case BusinessEntity.Product.NegativeBalancePolicy.Yes:
+                            product.Inventory = newInventory;
+                            break;
+                        case BusinessEntity.Product.NegativeBalancePolicy.No:
+                            if (newInventory < 0)
+                                return Result<InvoiceDto>.Failure($"موجودی کالای '{product.Name}' کافی نیست.");
+                            product.Inventory = newInventory;
+                            break;
+                        case BusinessEntity.Product.NegativeBalancePolicy.Message:
+                            product.Inventory = newInventory;
+                            break;
+                        default:
+                            return Result<InvoiceDto>.Failure("سیاست انبار نامعتبر است.");
+                    }
+                    _unitOfWork.Products.Update(product);
+
+                    // قیمت واحد بر اساس سطح قیمتی خریدار
                     int unitPrice = 0;
-                    var price = unitLevel.Prices
-                        .FirstOrDefault(p => p.PriceLevelId == people.PriceLevelID);
-                    if (price != null)
-                    {
-                        unitPrice = (int)price.SalePrice;
-                    }
-                    else
-                    {
-                        unitPrice = (int)product.SalePrice;
-                    }
+                    var price = unitLevel.Prices.FirstOrDefault(p => p.PriceLevelId == people.PriceLevelID);
+                    unitPrice = price != null ? (int)price.SalePrice : (int)product.SalePrice;
 
                     int originalTotal = unitPrice * itemDto.Quantity;
                     totalOriginalPrice += originalTotal;
 
-                    // محاسبه تخفیف عمومی
+                    // تخفیف عمومی
                     int publicDiscountAmount = 0;
                     if (dto.ApplyPublicDiscount)
                     {
-                        var publicResult = await _publicDiscountService
-                            .CalculatePublicDiscountAsync(itemDto.Barcode, dto.Date, dto.StoreId);
-                        if (publicResult.Success)
-                        {
+                        var publicResult = await _publicDiscountService.CalculatePublicDiscountAsync(
+                            itemDto.Barcode, dto.Date, dto.StoreId);
+                        if (publicResult.IsSuccess)
                             publicDiscountAmount = publicResult.Data.DiscountAmount * itemDto.Quantity;
-                        }
                     }
 
-                    // محاسبه تخفیف باشگاه (فقط در صورت وجود مشتری باشگاه)
+                    // تخفیف باشگاه
                     int clubDiscountAmount = 0;
                     if (customer != null && dto.ApplyClubDiscount)
                     {
-                        var clubResult = await _clubDiscountService
-                            .CalculateClubDiscountAsync(itemDto.Barcode, customer.Id, originalTotal - publicDiscountAmount);
-                        if (clubResult.Success)
+                        var clubResult = await _clubDiscountService.CalculateClubDiscountAsync(
+                            itemDto.Barcode, customer.Id, originalTotal - publicDiscountAmount);
+                        if (clubResult.IsSuccess)
                         {
                             clubDiscountAmount = clubResult.Data.DiscountAmount;
                             appliedClubDiscountId = clubResult.Data.DiscountId;
@@ -156,7 +170,7 @@ namespace BusinessLogicLayer.Repository.Invoices
                         AllPrice = finalPrice,
                         OriginalPrice = originalTotal,
                         ClubDiscount = clubDiscountAmount,
-                        PublicDiscountId = null, // در صورت نیاز ذخیره شود
+                        PublicDiscountId = null,
                         ClubDiscountId = appliedClubDiscountId
                     };
 
@@ -166,11 +180,11 @@ namespace BusinessLogicLayer.Repository.Invoices
                     totalClubDiscount += clubDiscountAmount;
                 }
 
-                // 4. اعمال تخفیف سطح مشتری (روی مبلغ نهایی پس از تخفیف‌ها)
+                // 4. تخفیف سطح مشتری
                 if (customer != null)
                 {
                     var levelResult = await _customerService.GetCustomerCurrentLevelAsync(customer.Id);
-                    if (levelResult.Success && levelResult.Data != null)
+                    if (levelResult.IsSuccess && levelResult.Data != null)
                     {
                         var amountBeforeLevel = totalOriginalPrice - totalPublicDiscount - totalClubDiscount;
                         totalLevelDiscount = (int)(amountBeforeLevel * levelResult.Data.DiscountPercent / 100);
@@ -179,20 +193,19 @@ namespace BusinessLogicLayer.Repository.Invoices
 
                 int finalInvoiceAmount = totalOriginalPrice - totalPublicDiscount - totalClubDiscount - totalLevelDiscount;
 
-                // 5. بروزرسانی فاکتور
+                // بروزرسانی فاکتور
                 invoice.NumberofAllItems = dto.Items.Sum(i => i.Quantity);
                 invoice.OffAll = totalPublicDiscount;
                 invoice.ClubDiscountAll = totalClubDiscount;
                 invoice.LevelDiscountAmount = totalLevelDiscount;
                 invoice.TotalSum = finalInvoiceAmount;
-
                 _unitOfWork.Invoices.Update(invoice);
 
-                // 6. استفاده از کیف پول (در صورت درخواست)
+                // 5. استفاده از کیف پول
                 if (dto.UsedWalletAmount > 0 && customer != null)
                 {
                     var useWalletResult = await UseWalletForPaymentAsync(invoice.Id, customer.Id, dto.UsedWalletAmount);
-                    if (!useWalletResult.Success)
+                    if (!useWalletResult.IsSuccess)
                     {
                         await _unitOfWork.RollbackTransactionAsync();
                         return Result<InvoiceDto>.Failure(useWalletResult.Message);
@@ -201,7 +214,7 @@ namespace BusinessLogicLayer.Repository.Invoices
                     invoice.TotalSum -= dto.UsedWalletAmount;
                 }
 
-                // 7. برگشت تخفیف باشگاه به کیف پول
+                // 6. بازگشت تخفیف باشگاه به کیف پول
                 if (totalClubDiscount > 0 && dto.RefundClubDiscountToWallet && customer != null && appliedClubDiscountId != null)
                 {
                     var refundResult = await _walletService.RefundClubDiscountAsync(
@@ -210,17 +223,14 @@ namespace BusinessLogicLayer.Repository.Invoices
                         $"بازگشت تخفیف باشگاه برای فاکتور {invoice.InvoiceNumber}",
                         appliedClubDiscountId.Value,
                         invoice.Id);
-
-                    if (refundResult.Success)
-                    {
+                    if (refundResult.IsSuccess)
                         invoice.IsClubDiscountRefunded = true;
-                    }
                 }
 
-                // 8. محاسبه و اعمال امتیاز
+                // 7. محاسبه و اعمال امتیاز
                 if (customer != null && finalInvoiceAmount > 0)
                 {
-                    int earnedPoints = finalInvoiceAmount / 10000; // هر 10,000 ریال = 1 امتیاز
+                    int earnedPoints = finalInvoiceAmount / 10000;
                     if (earnedPoints > 0)
                     {
                         await _customerService.UpdateCustomerPointsAsync(
@@ -228,12 +238,63 @@ namespace BusinessLogicLayer.Repository.Invoices
                             earnedPoints,
                             $"خرید از فاکتور {invoice.InvoiceNumber}",
                             invoice.Id);
-
                         invoice.EarnedPoints = earnedPoints;
                     }
                 }
 
-                // 9. بروزرسانی آمار خرید مشتری
+                // 8. پردازش پرداخت‌های ترکیبی
+                if (dto.Payments != null && dto.Payments.Any())
+                {
+                    int totalPayments = dto.Payments.Sum(p => p.Amount);
+                    if (totalPayments != invoice.TotalSum)
+                        return Result<InvoiceDto>.Failure("مجموع مبالغ پرداختی با مبلغ فاکتور همخوانی ندارد.");
+
+                    foreach (var payment in dto.Payments)
+                    {
+                        switch (payment.PaymentType)
+                        {
+                            case BusinessEntity.Invoices.Type_Pay.Cash:
+                                if (!payment.FundId.HasValue)
+                                    return Result<InvoiceDto>.Failure("شناسه صندوق برای پرداخت نقدی الزامی است.");
+                                var fund = await _unitOfWork.Funds.GetByIdAsync(payment.FundId.Value);
+                                if (fund == null)
+                                    return Result<InvoiceDto>.Failure("صندوق انتخابی یافت نشد.");
+                                fund.Inventory += payment.Amount;
+                                _unitOfWork.Funds.Update(fund);
+                                await CreateTransaction(fund.AccountId, payment.Amount, "Increase",
+                                    $"پرداخت نقدی فاکتور {invoice.InvoiceNumber}");
+                                break;
+
+                            case BusinessEntity.Invoices.Type_Pay.Bank:
+                                if (!payment.BankAccountId.HasValue)
+                                    return Result<InvoiceDto>.Failure("شناسه حساب بانکی برای پرداخت بانکی الزامی است.");
+                                var bankAccount = await _unitOfWork.BankAccounts.GetByIdAsync(payment.BankAccountId.Value);
+                                if (bankAccount == null)
+                                    return Result<InvoiceDto>.Failure("حساب بانکی انتخابی یافت نشد.");
+                                bankAccount.Inventory += payment.Amount;
+                                _unitOfWork.BankAccounts.Update(bankAccount);
+                                await CreateTransaction(bankAccount.AccountId, payment.Amount, "Increase",
+                                    $"پرداخت بانکی فاکتور {invoice.InvoiceNumber}");
+                                break;
+
+                            case BusinessEntity.Invoices.Type_Pay.Credit:
+                                if (people.CreditLimit > 0 && people.Inventory + payment.Amount > people.CreditLimit)
+                                    return Result<InvoiceDto>.Failure("سقف اعتبار مشتری نقض می‌شود.");
+                                people.Inventory += payment.Amount;
+                                _unitOfWork.People.Update(people);
+                                break;
+
+                            case BusinessEntity.Invoices.Type_Pay.Wallet:
+                                // قبلاً پردازش شده
+                                continue;
+
+                            default:
+                                return Result<InvoiceDto>.Failure("نوع پرداخت نامعتبر است.");
+                        }
+                    }
+                }
+
+                // 9. بروزرسانی آمار
                 if (customer != null)
                 {
                     customer.TotalPurchaseAmount += finalInvoiceAmount;
@@ -241,20 +302,19 @@ namespace BusinessLogicLayer.Repository.Invoices
                     customer.LastPurchaseDate = dto.Date;
                     _unitOfWork.Customers.Update(customer);
                 }
-
-                // 10. بروزرسانی آمار خرید شخص (People)
-                people.Inventory += finalInvoiceAmount; // یا هر منطق دیگری
+              //  people.Inventory += finalInvoiceAmount;
                 _unitOfWork.People.Update(people);
 
                 await _unitOfWork.SaveChangesAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
                 var invoiceDto = await GetInvoiceByIdAsync(invoice.Id);
-                return Result<InvoiceDto>.SuccessResult(invoiceDto.Data, "فاکتور با موفقیت ایجاد شد");
+                return Result<InvoiceDto>.Success(invoiceDto.Data, "فاکتور با موفقیت ایجاد شد");
             }
             catch (Exception ex)
             {
                 await _unitOfWork.RollbackTransactionAsync();
+                _logger.LogError(ex, "خطا در ایجاد فاکتور");
                 return Result<InvoiceDto>.Failure($"خطا در ایجاد فاکتور: {ex.Message}");
             }
         }
@@ -274,7 +334,7 @@ namespace BusinessLogicLayer.Repository.Invoices
                 $"پرداخت بخشی از فاکتور {invoice.InvoiceNumber}",
                 invoiceId);
 
-            if (!withdrawResult.Success)
+            if (!withdrawResult.IsSuccess)
                 return withdrawResult;
 
             invoice.UsedWalletAmount = walletAmount;
@@ -282,12 +342,13 @@ namespace BusinessLogicLayer.Repository.Invoices
             _unitOfWork.Invoices.Update(invoice);
             await _unitOfWork.SaveChangesAsync();
 
-            return Result.SuccessResult();
+            return Result.Success();
         }
 
         public async Task<Result<InvoiceDto>> GetInvoiceByIdAsync(int id)
         {
             var invoice = await _unitOfWork.Invoices.GetByIdAsync(id,
+                default,
                 i => i.People,
                 i => i.Customer,
                 i => i.CustomerLevel);
@@ -295,22 +356,39 @@ namespace BusinessLogicLayer.Repository.Invoices
             if (invoice == null)
                 return Result<InvoiceDto>.Failure("فاکتور یافت نشد");
 
-            var items = await _unitOfWork.InvoiceItems
-                .FindAsync(ii => ii.InvoicesId == id, ii => ii.Product);
+            var items = await _unitOfWork.InvoiceItems.FindAsync(
+                ii => ii.InvoicesId == id,
+                default,
+                ii => ii.Product);
 
-            var walletTransactions = await _unitOfWork.WalletTransactions
-                .FindAsync(wt => wt.InvoiceId == id, wt => wt.Wallet, wt => wt.Invoice);
+            var walletTransactions = await _unitOfWork.WalletTransactions.FindAsync(
+                wt => wt.InvoiceId == id,
+                default,
+                wt => wt.Wallet,
+                wt => wt.Invoice);
 
-            var pointTransactions = await _unitOfWork.PointTransactions
-                .FindAsync(pt => pt.InvoiceId == id);
+            var pointTransactions = await _unitOfWork.PointTransactions.FindAsync(pt => pt.InvoiceId == id);
 
             var dto = MapToDto(invoice, items, walletTransactions, pointTransactions);
-            return Result<InvoiceDto>.SuccessResult(dto);
+            return Result<InvoiceDto>.Success(dto);
         }
 
         private string GenerateInvoiceNumber()
         {
             return $"INV-{DateTime.Now:yyyyMMddHHmmss}-{new Random().Next(1000, 9999)}";
+        }
+
+        private async Task CreateTransaction(int accountId, long amount, string type, string description)
+        {
+            var transaction = new BusinessEntity.Invoices.Transaction
+            {
+                AccountId = accountId,
+                Amount = amount,
+                Type = type,
+                Description = description,
+                Date = DateTime.Now
+            };
+            await _unitOfWork.Transactions.AddAsync(transaction);
         }
 
         private InvoiceDto MapToDto(BusinessEntity.Invoices.Invoices invoice,
@@ -326,9 +404,7 @@ namespace BusinessLogicLayer.Repository.Invoices
                 PeopleId = invoice.PeopleId,
                 PeopleName = invoice.People?.FirstName + " " + invoice.People?.LastName,
                 CustomerId = invoice.CustomerId,
-                CustomerName = invoice.Customer != null
-                    ? invoice.Customer.FirstName + " " + invoice.Customer.LastName
-                    : null,
+                CustomerName = invoice.Customer?.FirstName + " " + invoice.Customer?.LastName,
                 TotalOriginalPrice = items.Sum(i => i.OriginalPrice),
                 TotalPublicDiscount = invoice.OffAll,
                 TotalClubDiscount = invoice.ClubDiscountAll,
@@ -341,11 +417,11 @@ namespace BusinessLogicLayer.Repository.Invoices
                     Barcode = i.Barcode,
                     ProductId = i.ProductId,
                     ProductName = i.Product?.Name ?? i.Name,
-                    UnitName = "", // می‌توانید از واحد کالا استخراج کنید
+                    UnitName = "",
                     Quantity = i.Number,
                     UnitPrice = i.Price,
                     OriginalPrice = i.OriginalPrice,
-                    PublicDiscount = 0, // در صورت ذخیره‌سازی مقدار دهی شود
+                    PublicDiscount = 0,
                     ClubDiscount = i.ClubDiscount,
                     LevelDiscount = 0,
                     FinalPrice = i.AllPrice
@@ -369,26 +445,4 @@ namespace BusinessLogicLayer.Repository.Invoices
             };
         }
     }
-    //public class InvoicesService : Interface.Invoices.IInvoicesService
-    //{
-    //    private readonly DataAccessLayer.Interface.Invoices.IInvoicesRepository _InvoicesRepository;
-    //    private readonly ILogger<InvoicesService> _logger;
-
-    //    public InvoicesService(DataAccessLayer.Interface.Invoices.IInvoicesRepository invoicesRepository, ILogger<InvoicesService> logger)
-    //    {
-    //        _InvoicesRepository = invoicesRepository;
-    //        _logger = logger;
-    //    }
-
-    //    public async Task<string> Create(BusinessEntity.Invoices.Invoices invoice)
-    //    {
-    //        _logger.LogInformation("Request to add new Invoice: {@Invoice}", invoice);
-
-    //        var message = await _InvoicesRepository.AddInvoice(invoice);
-
-    //        _logger.LogInformation("Add result: {Message}", message);
-    //        return message;
-    //    }
-
-    //}
 }

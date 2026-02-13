@@ -34,9 +34,16 @@ namespace DataAccessLayer.Repository
             // ========== محصولات و قیمت‌گذاری ==========
             Products = new Repository<BusinessEntity.Product.Product>(_context);
             UnitsLevels = new Repository<UnitsLevel>(_context);
-            ProductBarcodes = new ProductBarcodeRepository(_context); // بعد از انتقال
+            ProductBarcodes = new ProductBarcodeRepository(_context);
             PriceLevels = new Repository<PriceLevels>(_context);
             ProductPrices = new Repository<ProductPrices>(_context);
+            StoreroomProducts = new Repository<Storeroom_Product>(_context); // ✅ اضافه شد
+
+            // ========== امور مالی (Fund, Bank) ==========
+            Funds = new Repository<BusinessEntity.Fund.Fund>(_context);
+            // اصلاح: استفاده از Definition_Bank_Account به جای Definition_Bank
+            BankAccounts = new Repository<BusinessEntity.Fund.Definition_Bank_Account>(_context);
+            Transactions = new Repository<BusinessEntity.Invoices.Transaction>(_context);
 
             // ========== اشخاص ==========
             People = new Repository<BusinessEntity.People.People>(_context);
@@ -46,7 +53,7 @@ namespace DataAccessLayer.Repository
             InvoiceItems = new Repository<BusinessEntity.Invoices.Invoices_Item>(_context);
         }
 
-        // ========== پراپرتی‌ها ==========
+        // ========== پراپرتی‌های باشگاه مشتریان ==========
         public IRepository<Store> Stores { get; }
         public ICustomerRepository Customers { get; }
         public IRepository<CustomerLevel> CustomerLevels { get; }
@@ -58,16 +65,28 @@ namespace DataAccessLayer.Repository
         public IPublicDiscountRepository PublicDiscounts { get; }
         public IRepository<PublicDiscountProduct> PublicDiscountProducts { get; }
         public IRepository<PointTransaction> PointTransactions { get; }
+
+        // ========== پراپرتی‌های محصولات ==========
         public IRepository<BusinessEntity.Product.Product> Products { get; }
         public IRepository<UnitsLevel> UnitsLevels { get; }
         public IProductBarcodeRepository ProductBarcodes { get; }
         public IRepository<PriceLevels> PriceLevels { get; }
         public IRepository<ProductPrices> ProductPrices { get; }
+        public IRepository<Storeroom_Product> StoreroomProducts { get; } // ✅ اضافه شد
+
+        // ========== پراپرتی‌های امور مالی ==========
+        public IRepository<BusinessEntity.Fund.Fund> Funds { get; }                // ✅ اضافه شد
+        public IRepository<BusinessEntity.Fund.Definition_Bank_Account> BankAccounts { get; } // ✅ اصلاح نوع
+        public IRepository<BusinessEntity.Invoices.Transaction> Transactions { get; }   // ✅ اضافه شد
+
+        // ========== پراپرتی اشخاص ==========
         public IRepository<BusinessEntity.People.People> People { get; }
+
+        // ========== پراپرتی‌های فاکتور ==========
         public IRepository<BusinessEntity.Invoices.Invoices> Invoices { get; }
         public IRepository<BusinessEntity.Invoices.Invoices_Item> InvoiceItems { get; }
 
-        // ========== تراکنش ==========
+        // ========== متدهای تراکنش ==========
         public async Task BeginTransactionAsync()
         {
             if (_transaction == null)

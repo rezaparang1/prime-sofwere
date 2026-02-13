@@ -4,9 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BusinessLogicLayer.Repository.Invoices
+namespace DataAccessLayer.Interface
 {
-    internal class Receive_OR_Pay
+    public interface ISoftDelete
     {
+        bool IsDelete { get; set; }
     }
 }

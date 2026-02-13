@@ -1,19 +1,20 @@
 ﻿using BusinessEntity.Fund;
 using BusinessLogicLayer.Interface;
+using BusinessLogicLayer.Interface.Fund;
 using DataAccessLayer;
 using DataAccessLayer.Interface;
 
 namespace BusinessLogicLayer.Repository.Fund
 {
-    public class DefinitionBankService : BusinessLogicLayer.Interface.Fund.IDefinitionBankService
+    public class DefinitionBankService : IDefinitionBankService
     {
-        private readonly IGenericRepository<Definition_Bank> _bankRepo;
-        private readonly IGenericRepository<Definition_Bank_Account> _accountRepo;
+        private readonly IRepository<Definition_Bank> _bankRepo;
+        private readonly IRepository<Definition_Bank_Account> _accountRepo;
         private readonly IGenericService<Definition_Bank> _genericService;
 
         public DefinitionBankService(
-            IGenericRepository<Definition_Bank> bankRepo,
-            IGenericRepository<Definition_Bank_Account> accountRepo,
+            IRepository<Definition_Bank> bankRepo,
+            IRepository<Definition_Bank_Account> accountRepo,
             IGenericService<Definition_Bank> genericService)
         {
             _bankRepo = bankRepo;
@@ -31,47 +32,47 @@ namespace BusinessLogicLayer.Repository.Fund
             return await _bankRepo.GetByIdAsync(id);
         }
 
-        public async Task<Result> Create(Definition_Bank async, int userId)
+        public async Task<Result> Create(Definition_Bank entity, int userId)
         {
-            if (string.IsNullOrWhiteSpace(async.Name))
+            if (string.IsNullOrWhiteSpace(entity.Name))
                 return Result.Failure("نام بانک نمی‌تواند خالی باشد.");
 
-            var exists = await _bankRepo.FindAsync(b => b.Name == async.Name);
+            var exists = await _bankRepo.FindAsync(b => b.Name == entity.Name);
             if (exists.Any())
                 return Result.Failure("این نام بانک قبلاً ثبت شده است.");
 
-            string log = $"ثبت بانک با نام {async.Name}";
-            return await _genericService.AddWithLogAsync(async, log, userId);
+            string log = $"ثبت بانک با نام {entity.Name}";
+            return await _genericService.AddWithLogAsync(entity, log, userId);
         }
 
-        public async Task<Result> Update(Definition_Bank async, int userId)
+        public async Task<Result> Update(Definition_Bank entity, int userId)
         {
-            if (string.IsNullOrWhiteSpace(async.Name))
+            if (string.IsNullOrWhiteSpace(entity.Name))
                 return Result.Failure("نام بانک نمی‌تواند خالی باشد.");
 
-            var existing = await _bankRepo.GetByIdAsync(async.Id);
+            var existing = await _bankRepo.GetByIdAsync(entity.Id);
             if (existing == null)
                 return Result.Failure("بانک یافت نشد.");
 
             var duplicate = (await _bankRepo
-                .FindAsync(b => b.Name == async.Name && b.Id != async.Id))
+                .FindAsync(b => b.Name == entity.Name && b.Id != entity.Id))
                 .Any();
 
             if (duplicate)
                 return Result.Failure("این نام بانک قبلاً ثبت شده است.");
 
-            string log = $"ویرایش بانک از '{existing.Name}' به '{async.Name}'";
-            return await _genericService.UpdateWithLogAsync(async, log, userId);
+            string log = $"ویرایش بانک از '{existing.Name}' به '{entity.Name}'";
+            return await _genericService.UpdateWithLogAsync(entity, log, userId);
         }
 
-        public async Task<Result> Delete(int Id, int userId)
+        public async Task<Result> Delete(int id, int userId)
         {
-            var bank = await _bankRepo.GetByIdAsync(Id);
+            var bank = await _bankRepo.GetByIdAsync(id);
             if (bank == null)
                 return Result.Failure("بانک یافت نشد.");
 
             var hasAccount = (await _accountRepo
-                .FindAsync(a => a.BankId == Id))
+                .FindAsync(a => a.BankId == id))
                 .Any();
 
             if (hasAccount)

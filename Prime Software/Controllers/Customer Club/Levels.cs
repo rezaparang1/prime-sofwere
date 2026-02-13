@@ -1,14 +1,12 @@
 ﻿using BusinessEntity.Customer_Club;
 using BusinessLogicLayer.DTO;
+using DataAccessLayer.Interface;
 using DataAccessLayer.Interface.Customer_Club;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Prime_Software.Controllers.Customer_Club
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    [Authorize(Roles = "Admin,Manager")]
     public class LevelsController : ControllerBase
     {
         private readonly IUnitOfWork _unitOfWork;

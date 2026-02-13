@@ -5,15 +5,15 @@ using BusinessEntity.Product;
 
 namespace BusinessLogicLayer.Repository.Product
 {
-    public class GroupProductService : Interface.Producr.IGroupProductService
+    public class GroupProductService : BusinessLogicLayer.Interface.Product.IGroupProductService
     {
-        private readonly IGenericRepository<Group_Product> _groupoductRepo;
-        private readonly IGenericRepository<BusinessEntity.Product.Product> _productRepo;
+        private readonly IRepository<Group_Product> _groupoductRepo;
+        private readonly IRepository<BusinessEntity.Product.Product> _productRepo;
         private readonly IGenericService<Group_Product> _genericService;
 
         public GroupProductService(
-            IGenericRepository<Group_Product> groupproductRepo,
-            IGenericRepository<BusinessEntity.Product.Product> productRepo,
+            IRepository<Group_Product> groupproductRepo,
+            IRepository<BusinessEntity.Product.Product> productRepo,
             IGenericService<Group_Product> genericService)
         {
             _groupoductRepo = groupproductRepo;

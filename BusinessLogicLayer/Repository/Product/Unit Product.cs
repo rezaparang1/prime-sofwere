@@ -7,13 +7,13 @@ namespace BusinessLogicLayer.Repository.Product
 {
     public class UnitProdudtService : BusinessLogicLayer.Interface.Producr.IUnitProductService
     {
-        private readonly IGenericRepository<Unit_Product> _unitproductRepo;
-        private readonly IGenericRepository<BusinessEntity.Product.Product> _productRepo;
+        private readonly IRepository<Unit_Product> _unitproductRepo;
+        private readonly IRepository<BusinessEntity.Product.Product> _productRepo;
         private readonly IGenericService<Unit_Product> _genericService;
 
         public UnitProdudtService(
-            IGenericRepository<Unit_Product> unitproductRepo,
-            IGenericRepository<BusinessEntity.Product.Product> productRepo,
+            IRepository<Unit_Product> unitproductRepo,
+            IRepository<BusinessEntity.Product.Product> productRepo,
             IGenericService<Unit_Product> genericService)
         {
             _unitproductRepo = unitproductRepo;

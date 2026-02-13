@@ -46,7 +46,7 @@ namespace BusinessLogicLayer.Repository.Product
 
         public async Task<Result> Create(Storeroom_Product storeroom, int userId)
         {
-            using var transaction = await _context.Database.BeginTransactionAsync();
+            await using var transaction = await _context.Database.BeginTransactionAsync();
 
             try
             {
@@ -61,9 +61,12 @@ namespace BusinessLogicLayer.Repository.Product
                     return Result.Failure("مسئول انبار باید انتخاب شود.");
 
                 // ایجاد انبار
-                var result = await _storeroomRepository.Create(storeroom);
-                if (!result.IsSuccess)
-                    return result;
+                var dalResult = await _storeroomRepository.Create(storeroom);
+                if (!dalResult.IsSuccess)
+                    return Result.Failure(dalResult.Message);   // ✅ تبدیل به BLL Result
+
+                // ذخیره تغییرات در دیتابیس
+                await _context.SaveChangesAsync();              // ✅ اضافه شد
 
                 // ثبت لاگ
                 await _logService.CreateLogAsync(
@@ -83,7 +86,7 @@ namespace BusinessLogicLayer.Repository.Product
 
         public async Task<Result> Update(Storeroom_Product storeroom, int userId)
         {
-            using var transaction = await _context.Database.BeginTransactionAsync();
+            await using var transaction = await _context.Database.BeginTransactionAsync();
 
             try
             {
@@ -92,9 +95,12 @@ namespace BusinessLogicLayer.Repository.Product
                     return Result.Failure("نام انبار الزامی است.");
 
                 // به‌روزرسانی انبار
-                var result = await _storeroomRepository.Update(storeroom);
-                if (!result.IsSuccess)
-                    return result;
+                var dalResult = await _storeroomRepository.Update(storeroom);
+                if (!dalResult.IsSuccess)
+                    return Result.Failure(dalResult.Message);   // ✅ تبدیل به BLL Result
+
+                // ذخیره تغییرات در دیتابیس
+                await _context.SaveChangesAsync();              // ✅ اضافه شد
 
                 // ثبت لاگ
                 await _logService.CreateLogAsync(
@@ -114,7 +120,7 @@ namespace BusinessLogicLayer.Repository.Product
 
         public async Task<Result> Delete(int id, int userId)
         {
-            using var transaction = await _context.Database.BeginTransactionAsync();
+            await using var transaction = await _context.Database.BeginTransactionAsync();
 
             try
             {
@@ -124,9 +130,12 @@ namespace BusinessLogicLayer.Repository.Product
                     return Result.Failure("انبار یافت نشد.");
 
                 // حذف انبار
-                var result = await _storeroomRepository.Delete(id);
-                if (!result.IsSuccess)
-                    return result;
+                var dalResult = await _storeroomRepository.Delete(id);
+                if (!dalResult.IsSuccess)
+                    return Result.Failure(dalResult.Message);   // ✅ تبدیل به BLL Result
+
+                // ذخیره تغییرات در دیتابیس
+                await _context.SaveChangesAsync();              // ✅ اضافه شد
 
                 // ثبت لاگ
                 await _logService.CreateLogAsync(

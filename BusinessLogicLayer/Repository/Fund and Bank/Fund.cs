@@ -3,6 +3,7 @@ using BusinessLogicLayer.Interface;
 using BusinessLogicLayer.Interface.Fund;
 using DataAccessLayer;
 using DataAccessLayer.Interface.Fund;
+using BusinessEntity.Fund;
 
 namespace BusinessLogicLayer.Repository.Fund
 {
@@ -56,9 +57,9 @@ namespace BusinessLogicLayer.Repository.Fund
                     return Result.Failure("موجودی اولیه نمی‌تواند منفی باشد.");
 
                 // ایجاد صندوق
-                var result = await _fundRepository.Create(fund);
-                if (!result.IsSuccess)
-                    return result;
+                var dalResult = await _fundRepository.Create(fund);
+                if (!dalResult.IsSuccess)
+                    return Result.Failure(dalResult.Message);   // ✅ تبدیل به BLL Result
 
                 // ذخیره تغییرات
                 await _context.SaveChangesAsync();
@@ -91,9 +92,9 @@ namespace BusinessLogicLayer.Repository.Fund
                     return Result.Failure("موجودی نمی‌تواند منفی باشد.");
 
                 // بروزرسانی صندوق
-                var result = await _fundRepository.Update(fund);
-                if (!result.IsSuccess)
-                    return result;
+                var dalResult = await _fundRepository.Update(fund);
+                if (!dalResult.IsSuccess)
+                    return Result.Failure(dalResult.Message);   // ✅ تبدیل به BLL Result
 
                 // ذخیره تغییرات
                 await _context.SaveChangesAsync();
@@ -124,9 +125,9 @@ namespace BusinessLogicLayer.Repository.Fund
                     return Result.Failure("صندوق یافت نشد.");
 
                 // حذف صندوق
-                var result = await _fundRepository.Delete(id);
-                if (!result.IsSuccess)
-                    return result;
+                var dalResult = await _fundRepository.Delete(id);
+                if (!dalResult.IsSuccess)
+                    return Result.Failure(dalResult.Message);   // ✅ تبدیل به BLL Result
 
                 // ذخیره تغییرات
                 await _context.SaveChangesAsync();

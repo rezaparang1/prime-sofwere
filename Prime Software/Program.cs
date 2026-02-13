@@ -1,21 +1,27 @@
 using BusinessLogicLayer.Interface;
+using BusinessLogicLayer.Interface.Customer_Club;
 using BusinessLogicLayer.Interface.Fund;
+using BusinessLogicLayer.Interface.Invoices;
 using BusinessLogicLayer.Interface.People;
 using BusinessLogicLayer.Interface.Producr;
 using BusinessLogicLayer.Interface.Settings;
 using BusinessLogicLayer.Repository;
+using BusinessLogicLayer.Repository.Customer_Club;
 using BusinessLogicLayer.Repository.Fund;
+using BusinessLogicLayer.Repository.Invoices;
 using BusinessLogicLayer.Repository.People;
 using BusinessLogicLayer.Repository.Product;
 using BusinessLogicLayer.Repository.Settings;
 using DataAccessLayer;
 using DataAccessLayer.Interface;
+using DataAccessLayer.Interface.Customer_Club;          // ???? IUnitOfWork ? ?????????????? ??????
 using DataAccessLayer.Interface.Fund;
 using DataAccessLayer.Interface.Fund_and_Bank;
 using DataAccessLayer.Interface.Product;
 using DataAccessLayer.Interface.Settings;
 using DataAccessLayer.Repository;
 using DataAccessLayer.Repository.Bank;
+using DataAccessLayer.Repository.Customer_Club;        // ???? UnitOfWork ? ?????????????? ??????
 using DataAccessLayer.Repository.Fund;
 using DataAccessLayer.Repository.Product;
 using DataAccessLayer.Repository.Settings;
@@ -147,20 +153,24 @@ void ConfigureJwtAuthentication()
 
 void ConfigureDependencies()
 {
-    builder.Services.AddScoped<IUserRepository, UserRepository>();
-    builder.Services.AddScoped<IUserService, UserService>();
+    // ================= Repository (Generic) =================
+    // ? ??? ?????????? ????? ???? (???? ???? ???? LogService ? ...)
+    builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 
-    builder.Services.AddScoped<IStoreroomProductRepository, StoreroomProductRepository>();
-    builder.Services.AddScoped<IStoreroomProductService, StoreroomProductService>();
+    // ================= UnitOfWork =================
+    builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-    // ================= Generic Services =================
-    builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
+    builder.Services.AddScoped<IPurchaseInvoiceService, PurchaseInvoiceService>();
+
+    // ================= Generic Service (BLL) =================
     builder.Services.AddScoped(typeof(IGenericService<>), typeof(GenericService<>));
+
+    // ================= Log Service =================
     builder.Services.AddScoped<ILogService, LogService>();
 
     // ================= User & Auth Services =================
-    builder.Services.AddScoped<IUserService, UserService>();
     builder.Services.AddScoped<IUserRepository, UserRepository>();
+    builder.Services.AddScoped<IUserService, UserService>();
     builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
     builder.Services.AddScoped<ITokenService, TokenService>();
     builder.Services.AddHttpContextAccessor();
@@ -168,7 +178,6 @@ void ConfigureDependencies()
     // ================= Product Services =================
     builder.Services.AddScoped<IProductRepository, ProductRepository>();
     builder.Services.AddScoped<IProductService, ProductService>();
-
 
     // ================= File Upload Services =================
     builder.Services.AddScoped<IFileStorageService, FileStorageService>();
@@ -183,29 +192,33 @@ void ConfigureDependencies()
 
     // ================= Bank Services =================
     builder.Services.AddScoped<IDefinitionBankService, DefinitionBankService>();
-
     builder.Services.AddScoped<IDefinitionBankAccountRepository, DefinitionBankAccountRepository>();
     builder.Services.AddScoped<IDefinitionBankAccountService, DefinitionBankAccountService>();
 
     // ================= Settings & Definition Services =================
-    builder.Services.AddScoped<IGroupProductService, GroupProductService>();
+    builder.Services.AddScoped<BusinessLogicLayer.Interface.Product.IGroupProductService, GroupProductService>();
     builder.Services.AddScoped<IGroupPeopleService, GroupPeopelService>();
     builder.Services.AddScoped<IGroupUserService, GroupUserService>();
     builder.Services.AddScoped<ITypePeopleService, TypePeopelService>();
     builder.Services.AddScoped<ITypeProductService, TypeProdudtService>();
     builder.Services.AddScoped<ISectionProductService, SectionProductService>();
     builder.Services.AddScoped<IUnitProductService, UnitProdudtService>();
-    builder.Services.AddScoped<IPriceLevelsService, PricelevelService>();
+    builder.Services.AddScoped<BusinessLogicLayer.Interface.Product.IPriceLevelsService, PricelevelService>();
 
-    // ================= Repository for Settings =================
-    //builder.Services.AddScoped<IGroupProductRepository, GroupProductRepository>();
-    //builder.Services.AddScoped<IGroupPeopleRepository, GroupPeopleRepository>();
-    //builder.Services.AddScoped<IGroupUserRepository, GroupUserRepository>();
-    //builder.Services.AddScoped<ITypePeopleRepository, TypePeopleRepository>();
-    //builder.Services.AddScoped<ITypeProductRepository, TypeProductRepository>();
-    //builder.Services.AddScoped<ISectionProductRepository, SectionProductRepository>();
-    //builder.Services.AddScoped<IUnitProductRepository, UnitProductRepository>();
-    //builder.Services.AddScoped<IPriceLevelsRepository, PriceLevelsRepository>();
+    // ================= Customer Club Services =================
+    builder.Services.AddScoped<ICustomerService, CustomerService>();
+    builder.Services.AddScoped<IWalletService, WalletService>();
+    builder.Services.AddScoped<IClubDiscountService, ClubDiscountService>();
+    builder.Services.AddScoped<IPublicDiscountService, PublicDiscountService>();
+    builder.Services.AddScoped<IInvoiceService, InvoiceService>();
+
+    // ================= Reminder Service =================
+    builder.Services.AddScoped<IReminderRepository, ReminderRepository>();
+   // builder.Services.AddScoped<IReminderService, ReminderService>();
+
+    // ================= Storeroom Product Service =================
+    builder.Services.AddScoped<IStoreroomProductRepository, StoreroomProductRepository>();
+    builder.Services.AddScoped<IStoreroomProductService, StoreroomProductService>();
 
     // ================= Form Options for File Upload =================
     builder.Services.Configure<FormOptions>(options =>
@@ -251,7 +264,6 @@ void ConfigureSwagger()
             }
         });
 
-        // ????? ???? XML Documentation
         var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
         var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
         if (File.Exists(xmlPath))
@@ -288,9 +300,9 @@ void ConfigureCors()
         {
             policy
                 .WithOrigins(
-                    "http://localhost:3000", // React development
-                    "http://localhost:5173", // Vite development
-                    "https://yourdomain.com" // Production domain
+                    "http://localhost:3000",
+                    "http://localhost:5173",
+                    "https://yourdomain.com"
                 )
                 .AllowAnyMethod()
                 .AllowAnyHeader()
@@ -306,7 +318,6 @@ void ConfigureAutoMapper()
 
 void ConfigureMiddlewarePipeline()
 {
-    // ???? ??? ???????? ??????? (??????)
     app.UseStaticFiles();
 
     if (app.Environment.IsDevelopment())
@@ -315,7 +326,7 @@ void ConfigureMiddlewarePipeline()
         app.UseSwaggerUI(c =>
         {
             c.SwaggerEndpoint("/swagger/v1/swagger.json", "Prime Software API v1");
-            c.RoutePrefix = "api-docs"; // ??????: /api-docs
+            c.RoutePrefix = "api-docs";
         });
 
         app.UseDeveloperExceptionPage();
@@ -333,7 +344,6 @@ void ConfigureMiddlewarePipeline()
     app.UseAuthentication();
     app.UseAuthorization();
 
-    // Health Check Endpoint
     app.MapHealthChecks("/health", new HealthCheckOptions
     {
         ResponseWriter = async (context, report) =>
@@ -356,7 +366,6 @@ void ConfigureMiddlewarePipeline()
         }
     });
 
-    // Global Error Handling Middleware
     app.Use(async (context, next) =>
     {
         try
@@ -376,7 +385,5 @@ void ConfigureMiddlewarePipeline()
     });
 
     app.MapControllers();
-
-    // Fallback route
     app.MapFallback(() => Results.Problem("Endpoint not found", statusCode: 404));
 }

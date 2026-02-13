@@ -7,7 +7,7 @@ namespace Prime_Software.Controllers.Customer_Club
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "Admin,Manager")]
+    [Authorize]
     public class PublicDiscountsController : ControllerBase
     {
         private readonly IPublicDiscountService _publicDiscountService;
@@ -21,7 +21,7 @@ namespace Prime_Software.Controllers.Customer_Club
         public async Task<IActionResult> Create([FromBody] PublicDiscountCreateDto dto)
         {
             var result = await _publicDiscountService.CreatePublicDiscountAsync(dto);
-            if (!result.Success)
+            if (!result.IsSuccess)                          // ✅ اصلاح Success به IsSuccess
                 return BadRequest(new { success = false, message = result.Message });
 
             return Ok(new { success = true, data = result.Data, message = result.Message });
@@ -38,7 +38,7 @@ namespace Prime_Software.Controllers.Customer_Club
         public async Task<IActionResult> GetById(int id)
         {
             var result = await _publicDiscountService.GetDiscountByIdAsync(id);
-            if (!result.Success)
+            if (!result.IsSuccess)                          // ✅ اصلاح Success به IsSuccess
                 return NotFound(new { success = false, message = result.Message });
 
             return Ok(new { success = true, data = result.Data });
@@ -48,7 +48,7 @@ namespace Prime_Software.Controllers.Customer_Club
         public async Task<IActionResult> Deactivate(int id)
         {
             var result = await _publicDiscountService.DeactivateDiscountAsync(id);
-            if (!result.Success)
+            if (!result.IsSuccess)                          // ✅ اصلاح Success به IsSuccess
                 return BadRequest(new { success = false, message = result.Message });
 
             return Ok(new { success = true, message = result.Message });
@@ -64,7 +64,7 @@ namespace Prime_Software.Controllers.Customer_Club
             var result = await _publicDiscountService.CalculatePublicDiscountAsync(barcode, time, storeId);
             return Ok(new
             {
-                success = result.Success,
+                success = result.IsSuccess,                 // ✅ اصلاح Success به IsSuccess
                 discountAmount = result.Data?.DiscountAmount ?? 0,
                 discountId = result.Data?.DiscountId
             });

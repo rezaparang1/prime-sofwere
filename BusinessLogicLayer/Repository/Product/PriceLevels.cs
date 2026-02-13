@@ -5,15 +5,15 @@ using DataAccessLayer.Interface;
 
 namespace BusinessLogicLayer.Repository.Product
 {
-    public class PricelevelService : Interface.Producr.IPriceLevelsService
+    public class PricelevelService : BusinessLogicLayer.Interface.Product.IPriceLevelsService
     {
-        private readonly IGenericRepository<PriceLevels> _pricelevelRepo;
-        private readonly IGenericRepository<BusinessEntity.People.People> _peopelRepo;
+        private readonly IRepository<PriceLevels> _pricelevelRepo;
+        private readonly IRepository<BusinessEntity.People.People> _peopelRepo;
         private readonly IGenericService<PriceLevels> _genericService;
 
         public PricelevelService(
-            IGenericRepository<PriceLevels> pricelevelRepo,
-            IGenericRepository<BusinessEntity.People.People> peopleRepo,
+            IRepository<PriceLevels> pricelevelRepo,
+            IRepository<BusinessEntity.People.People> peopleRepo,
             IGenericService<PriceLevels> genericService)
         {
             _pricelevelRepo = pricelevelRepo;

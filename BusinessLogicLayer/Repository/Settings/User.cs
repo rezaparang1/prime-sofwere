@@ -54,7 +54,7 @@ namespace BusinessLogicLayer.Repository.Settings
 
         public async Task<Result> Create(User user, int currentUserId)
         {
-            using var transaction = await _context.Database.BeginTransactionAsync();
+            await using var transaction = await _context.Database.BeginTransactionAsync();
 
             try
             {
@@ -75,9 +75,9 @@ namespace BusinessLogicLayer.Repository.Settings
                     return Result.Failure("گروه کاربری باید انتخاب شود.");
 
                 // ایجاد کاربر
-                var result = await _userRepository.Create(user);
-                if (!result.IsSuccess)
-                    return result;
+                var dalResult = await _userRepository.Create(user);
+                if (!dalResult.IsSuccess)
+                    return Result.Failure(dalResult.Message);   // ✅ تبدیل به BLL Result
 
                 // ذخیره تغییرات
                 await _context.SaveChangesAsync();
@@ -100,7 +100,7 @@ namespace BusinessLogicLayer.Repository.Settings
 
         public async Task<Result> Update(User user, int currentUserId)
         {
-            using var transaction = await _context.Database.BeginTransactionAsync();
+            await using var transaction = await _context.Database.BeginTransactionAsync();
 
             try
             {
@@ -119,9 +119,9 @@ namespace BusinessLogicLayer.Repository.Settings
                     return Result.Failure("رمز عبور جدید باید حداقل ۶ کاراکتر باشد.");
 
                 // به‌روزرسانی کاربر
-                var result = await _userRepository.Update(user);
-                if (!result.IsSuccess)
-                    return result;
+                var dalResult = await _userRepository.Update(user);
+                if (!dalResult.IsSuccess)
+                    return Result.Failure(dalResult.Message);   // ✅ تبدیل به BLL Result
 
                 // ذخیره تغییرات
                 await _context.SaveChangesAsync();
@@ -144,7 +144,7 @@ namespace BusinessLogicLayer.Repository.Settings
 
         public async Task<Result> Delete(int id, int currentUserId)
         {
-            using var transaction = await _context.Database.BeginTransactionAsync();
+            await using var transaction = await _context.Database.BeginTransactionAsync();
 
             try
             {
@@ -158,9 +158,9 @@ namespace BusinessLogicLayer.Repository.Settings
                     return Result.Failure("شما نمی‌توانید حساب کاربری خود را حذف کنید.");
 
                 // حذف کاربر
-                var result = await _userRepository.Delete(id);
-                if (!result.IsSuccess)
-                    return result;
+                var dalResult = await _userRepository.Delete(id);
+                if (!dalResult.IsSuccess)
+                    return Result.Failure(dalResult.Message);   // ✅ تبدیل به BLL Result
 
                 // ذخیره تغییرات
                 await _context.SaveChangesAsync();

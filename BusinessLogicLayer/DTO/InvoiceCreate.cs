@@ -19,5 +19,6 @@ namespace BusinessLogicLayer.DTO
         public bool RefundClubDiscountToWallet { get; set; } = true;
         public int UsedWalletAmount { get; set; } = 0;
         public List<InvoiceItemCreateDto> Items { get; set; } = new();
+        public List<PaymentDetailDto> Payments { get; set; } = new();
     }
 }

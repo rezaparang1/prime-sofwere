@@ -21,7 +21,7 @@ namespace Prime_Software.Controllers.Customer_Club
         public async Task<IActionResult> GetWallet(int customerId)
         {
             var result = await _walletService.GetWalletByCustomerIdAsync(customerId);
-            if (!result.Success)
+            if (!result.IsSuccess)                          // ✅ اصلاح Success به IsSuccess
                 return NotFound(new { success = false, message = result.Message });
 
             return Ok(new { success = true, data = result.Data });
@@ -38,7 +38,7 @@ namespace Prime_Software.Controllers.Customer_Club
         public async Task<IActionResult> GetTransactions(int customerId, [FromQuery] int? count = null)
         {
             var result = await _walletService.GetTransactionsAsync(customerId, count);
-            if (!result.Success)
+            if (!result.IsSuccess)                          // ✅ اصلاح Success به IsSuccess
                 return BadRequest(new { success = false, message = result.Message });
 
             return Ok(new { success = true, data = result.Data });
@@ -49,7 +49,7 @@ namespace Prime_Software.Controllers.Customer_Club
         public async Task<IActionResult> Deposit([FromBody] DepositDto dto)
         {
             var result = await _walletService.DepositAsync(dto.CustomerId, dto.Amount, dto.Description);
-            if (!result.Success)
+            if (!result.IsSuccess)                          // ✅ اصلاح Success به IsSuccess
                 return BadRequest(new { success = false, message = result.Message });
 
             return Ok(new { success = true, message = result.Message });

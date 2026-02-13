@@ -1,6 +1,7 @@
 ﻿using BusinessEntity.Customer_Club;
 using BusinessLogicLayer.DTO;
 using BusinessLogicLayer.Interface.Customer_Club;
+using DataAccessLayer.Interface;
 using DataAccessLayer.Interface.Customer_Club;
 using System;
 using System.Collections.Generic;
@@ -84,7 +85,7 @@ namespace BusinessLogicLayer.Repository.Customer_Club
 
             await _unitOfWork.SaveChangesAsync();
             var dtoResult = await MapToDto(discount);
-            return Result<PublicDiscountDto>.SuccessResult(dtoResult, "تخفیف عمومی با موفقیت ایجاد شد");
+            return Result<PublicDiscountDto>.Success(dtoResult, "تخفیف عمومی با موفقیت ایجاد شد");
         }
 
         public async Task<Result<PublicDiscountCalculationResult>> CalculatePublicDiscountAsync(string barcode, DateTime purchaseTime, int storeId)
@@ -93,7 +94,7 @@ namespace BusinessLogicLayer.Repository.Customer_Club
 
             var barcodeEntity = await _unitOfWork.ProductBarcodes.GetByBarcodeAsync(barcode);
             if (barcodeEntity == null)
-                return Result<PublicDiscountCalculationResult>.SuccessResult(result);
+                return Result<PublicDiscountCalculationResult>.Success(result);
 
             var dayOfWeek = purchaseTime.DayOfWeek;
             var timeOfDay = purchaseTime.TimeOfDay;
@@ -109,8 +110,8 @@ namespace BusinessLogicLayer.Repository.Customer_Club
                     continue;
 
                 var discountProduct = discount.Products?.FirstOrDefault(p =>
-                    (p.UnitLevelId == barcodeEntity.UnitLevelId) ||
-                    (p.ProductId == barcodeEntity.ProductId && p.UnitLevelId == null));
+                    (p.UnitLevelId == barcodeEntity.ProductUnitId) ||
+                    (p.ProductId == barcodeEntity.ProductUnit.ProductId && p.UnitLevelId == null));
 
                 if (discountProduct != null)
                 {
@@ -128,7 +129,7 @@ namespace BusinessLogicLayer.Repository.Customer_Club
                 }
             }
 
-            return Result<PublicDiscountCalculationResult>.SuccessResult(result);
+            return Result<PublicDiscountCalculationResult>.Success(result);
         }
 
         public async Task<Result<PublicDiscountDto>> GetDiscountByIdAsync(int id)
@@ -138,7 +139,7 @@ namespace BusinessLogicLayer.Repository.Customer_Club
                 return Result<PublicDiscountDto>.Failure("تخفیف یافت نشد");
 
             var dto = await MapToDto(discount);
-            return Result<PublicDiscountDto>.SuccessResult(dto);
+            return Result<PublicDiscountDto>.Success(dto);
         }
 
         public async Task<Result<IEnumerable<PublicDiscountDto>>> GetActiveDiscountsAsync(int storeId)
@@ -147,7 +148,7 @@ namespace BusinessLogicLayer.Repository.Customer_Club
             var dtos = new List<PublicDiscountDto>();
             foreach (var d in discounts)
                 dtos.Add(await MapToDto(d));
-            return Result<IEnumerable<PublicDiscountDto>>.SuccessResult(dtos);
+            return Result<IEnumerable<PublicDiscountDto>>.Success(dtos);
         }
 
         public async Task<Result> DeactivateDiscountAsync(int discountId)
@@ -159,7 +160,7 @@ namespace BusinessLogicLayer.Repository.Customer_Club
             discount.IsActive = false;
             _unitOfWork.PublicDiscounts.Update(discount);
             await _unitOfWork.SaveChangesAsync();
-            return Result.SuccessResult("تخفیف غیرفعال شد");
+            return Result.Success("تخفیف غیرفعال شد");
         }
 
         private bool IsDayActive(PublicDiscount discount, DayOfWeek dayOfWeek)

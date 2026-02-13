@@ -21,7 +21,7 @@ namespace Prime_Software.Controllers.Customer_Club
         public async Task<IActionResult> Create([FromBody] ClubDiscountCreateDto dto)
         {
             var result = await _clubDiscountService.CreateClubDiscountAsync(dto);
-            if (!result.Success)
+            if (!result.IsSuccess)                          // ✅ اصلاح Success به IsSuccess
                 return BadRequest(new { success = false, message = result.Message });
 
             return Ok(new { success = true, data = result.Data, message = result.Message });
@@ -38,7 +38,7 @@ namespace Prime_Software.Controllers.Customer_Club
         public async Task<IActionResult> GetById(int id)
         {
             var result = await _clubDiscountService.GetDiscountByIdAsync(id);
-            if (!result.Success)
+            if (!result.IsSuccess)                          // ✅ اصلاح Success به IsSuccess
                 return NotFound(new { success = false, message = result.Message });
 
             return Ok(new { success = true, data = result.Data });

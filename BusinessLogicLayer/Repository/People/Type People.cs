@@ -8,13 +8,13 @@ namespace BusinessLogicLayer.Repository.People
 {
     public class TypePeopelService : Interface.People.ITypePeopleService
     {
-        private readonly IGenericRepository<Type_People> _typepeopleRepo;
-        private readonly IGenericRepository<BusinessEntity.People.People> _peopleRepo;
+        private readonly IRepository<Type_People> _typepeopleRepo;
+        private readonly IRepository<BusinessEntity.People.People> _peopleRepo;
         private readonly IGenericService<Type_People> _genericService;
 
         public TypePeopelService(
-            IGenericRepository<Type_People> typepeopleRepo,
-            IGenericRepository<BusinessEntity.People.People> peopelRepo,
+            IRepository<Type_People> typepeopleRepo,
+            IRepository<BusinessEntity.People.People> peopelRepo,
             IGenericService<Type_People> genericService)
         {
             _typepeopleRepo = typepeopleRepo;

@@ -1,12 +1,8 @@
 ﻿using BusinessEntity.Customer_Club;
 using BusinessLogicLayer.DTO;
 using BusinessLogicLayer.Interface.Customer_Club;
-using DataAccessLayer.Interface.Customer_Club;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using DataAccessLayer.Interface;
+
 
 namespace BusinessLogicLayer.Repository.Customer_Club
 {
@@ -56,11 +52,10 @@ namespace BusinessLogicLayer.Repository.Customer_Club
                 }
                 else if (prodDto.UnitLevelId.HasValue)
                 {
-                    // قیمت اصلی را از واحد کالا و سطح قیمتی پیش‌فرض (مثلاً 1) دریافت کنید
                     var unit = await _unitOfWork.UnitsLevels.GetByIdAsync(prodDto.UnitLevelId.Value);
                     if (unit != null)
                     {
-                        var defaultPrice = unit.Prices.FirstOrDefault(p => p.PriceLevelId == 1); // سطح قیمتی پیش‌فرض
+                        var defaultPrice = unit.Prices.FirstOrDefault(p => p.PriceLevelId == 1);
                         originalPrice = defaultPrice != null ? (int)defaultPrice.SalePrice : (int)(unit.Product?.SalePrice ?? 0);
                     }
                 }
@@ -78,7 +73,8 @@ namespace BusinessLogicLayer.Repository.Customer_Club
 
             await _unitOfWork.SaveChangesAsync();
             var resultDto = await MapToDto(discount);
-            return Result<ClubDiscountDto>.SuccessResult(resultDto, "تخفیف باشگاه با موفقیت ایجاد شد");
+            // ✅ اصلاح: SuccessResult به Success تغییر یافت
+            return Result<ClubDiscountDto>.Success(resultDto, "تخفیف باشگاه با موفقیت ایجاد شد");
         }
 
         public async Task<Result<ClubDiscountCalculationResult>> CalculateClubDiscountAsync(string barcode, int customerId, int originalPrice)
@@ -88,40 +84,37 @@ namespace BusinessLogicLayer.Repository.Customer_Club
             // 1. بررسی عضویت مشتری در باشگاه
             var customer = await _unitOfWork.Customers.GetByIdAsync(customerId);
             if (customer == null || !customer.IsClubMember)
-                return Result<ClubDiscountCalculationResult>.SuccessResult(result);
+                return Result<ClubDiscountCalculationResult>.Success(result);
 
             // 2. یافتن واحد کالا با بارکد
             var barcodeEntity = await _unitOfWork.ProductBarcodes.GetByBarcodeAsync(barcode);
             if (barcodeEntity == null)
-                return Result<ClubDiscountCalculationResult>.SuccessResult(result);
+                return Result<ClubDiscountCalculationResult>.Success(result);
 
             var now = DateTime.Now;
 
             // 3. جستجوی تخفیف‌های مخصوص این واحد
             var discounts = new List<ClubDiscount>();
-            if (barcodeEntity.ProductUnitId != null)
-            {
-                var unitDiscounts = await _unitOfWork.ClubDiscounts
-                    .GetActiveDiscountsByUnitAsync(barcodeEntity.ProductUnitId.Value, now);
-                discounts.AddRange(unitDiscounts);
-            }
+            var unitDiscounts = await _unitOfWork.ClubDiscounts
+                .GetActiveDiscountsByUnitAsync(barcodeEntity.ProductUnitId, now);
+            discounts.AddRange(unitDiscounts);
 
-            // 4. جستجوی تخفیف‌های مخصوص کل محصول (اگر تخفیف واحد وجود نداشت)
+            // 4. جستجوی تخفیف‌های مخصوص کل محصول – اصلاح نام متد
             var productDiscounts = await _unitOfWork.ClubDiscounts
-                .GetActiveDiscountsByProductAsync(barcodeEntity.ProductId, now);
+                .GetDiscountsByProductAsync(barcodeEntity.ProductUnit.ProductId, now); // دسترسی به ProductId از طریق ProductUnit
             discounts.AddRange(productDiscounts);
 
             if (!discounts.Any())
-                return Result<ClubDiscountCalculationResult>.SuccessResult(result);
+                return Result<ClubDiscountCalculationResult>.Success(result);
 
-            // 5. انتخاب اولین تخفیف (می‌توانید منطق انتخاب بهترین تخفیف را پیاده‌سازی کنید)
+            // 5. انتخاب اولین تخفیف
             var discount = discounts.First();
             var discountProduct = discount.Products.FirstOrDefault(p =>
                 (p.UnitLevelId == barcodeEntity.ProductUnitId) ||
-                (p.ProductId == barcodeEntity.pro && p.UnitLevelId == null));
+                (p.ProductId == barcodeEntity.ProductUnit.ProductId && p.UnitLevelId == null));
 
             if (discountProduct == null)
-                return Result<ClubDiscountCalculationResult>.SuccessResult(result);
+                return Result<ClubDiscountCalculationResult>.Success(result);
 
             int discountAmount = 0;
             if (discount.Type == DiscountType.Percentage)
@@ -137,7 +130,7 @@ namespace BusinessLogicLayer.Repository.Customer_Club
             result.DiscountId = discount.Id;
             result.ClubPrice = discountProduct.ClubPrice;
 
-            return Result<ClubDiscountCalculationResult>.SuccessResult(result);
+            return Result<ClubDiscountCalculationResult>.Success(result);
         }
 
         public async Task<Result<ClubDiscountDto>> GetDiscountByIdAsync(int id)
@@ -147,7 +140,7 @@ namespace BusinessLogicLayer.Repository.Customer_Club
                 return Result<ClubDiscountDto>.Failure("تخفیف یافت نشد");
 
             var dto = await MapToDto(discount);
-            return Result<ClubDiscountDto>.SuccessResult(dto);
+            return Result<ClubDiscountDto>.Success(dto);
         }
 
         public async Task<Result<IEnumerable<ClubDiscountDto>>> GetActiveDiscountsAsync(int storeId)
@@ -156,19 +149,19 @@ namespace BusinessLogicLayer.Repository.Customer_Club
             var dtos = new List<ClubDiscountDto>();
             foreach (var d in discounts)
                 dtos.Add(await MapToDto(d));
-            return Result<IEnumerable<ClubDiscountDto>>.SuccessResult(dtos);
+            return Result<IEnumerable<ClubDiscountDto>>.Success(dtos);
         }
 
         public async Task<Result<bool>> HasActiveDiscountForProductAsync(int productId, int storeId)
         {
             var has = await _unitOfWork.ClubDiscounts.HasActiveDiscountForProductAsync(productId, DateTime.Now, storeId);
-            return Result<bool>.SuccessResult(has);
+            return Result<bool>.Success(has);
         }
 
         public async Task<Result<bool>> HasActiveDiscountForUnitAsync(int unitLevelId, int storeId)
         {
             var has = await _unitOfWork.ClubDiscounts.HasActiveDiscountForUnitAsync(unitLevelId, DateTime.Now, storeId);
-            return Result<bool>.SuccessResult(has);
+            return Result<bool>.Success(has);
         }
 
         // ============ متدهای کمکی ============

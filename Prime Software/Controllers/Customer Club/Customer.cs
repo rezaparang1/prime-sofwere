@@ -24,7 +24,7 @@ namespace Prime_Software.Controllers.Customer_Club
         public async Task<IActionResult> Register([FromBody] CustomerRegisterDto dto)
         {
             var result = await _customerService.RegisterCustomerAsync(dto);
-            if (!result.Success)
+            if (!result.IsSuccess)                          // ✅ اصلاح Success به IsSuccess
                 return BadRequest(new { success = false, message = result.Message });
 
             return Ok(new { success = true, data = result.Data, message = result.Message });
@@ -34,7 +34,7 @@ namespace Prime_Software.Controllers.Customer_Club
         public async Task<IActionResult> GetByBarcode(string barcode)
         {
             var result = await _customerService.GetCustomerByBarcodeAsync(barcode);
-            if (!result.Success)
+            if (!result.IsSuccess)                          // ✅ اصلاح Success به IsSuccess
                 return NotFound(new { success = false, message = result.Message });
 
             return Ok(new { success = true, data = result.Data });
@@ -44,7 +44,7 @@ namespace Prime_Software.Controllers.Customer_Club
         public async Task<IActionResult> GetById(int id)
         {
             var result = await _customerService.GetCustomerByIdAsync(id);
-            if (!result.Success)
+            if (!result.IsSuccess)                          // ✅ اصلاح Success به IsSuccess
                 return NotFound(new { success = false, message = result.Message });
 
             return Ok(new { success = true, data = result.Data });
@@ -54,7 +54,7 @@ namespace Prime_Software.Controllers.Customer_Club
         public async Task<IActionResult> GetWallet(int id)
         {
             var result = await _walletService.GetWalletByCustomerIdAsync(id);
-            if (!result.Success)
+            if (!result.IsSuccess)                          // ✅ اصلاح Success به IsSuccess
                 return NotFound(new { success = false, message = result.Message });
 
             return Ok(new { success = true, data = result.Data });
@@ -64,7 +64,7 @@ namespace Prime_Software.Controllers.Customer_Club
         public async Task<IActionResult> GetPoints(int id)
         {
             var customer = await _customerService.GetCustomerByIdAsync(id);
-            if (!customer.Success)
+            if (!customer.IsSuccess)                        // ✅ اصلاح Success به IsSuccess
                 return NotFound(new { success = false, message = customer.Message });
 
             var balance = await _walletService.GetBalanceAsync(id);
@@ -87,7 +87,7 @@ namespace Prime_Software.Controllers.Customer_Club
         public async Task<IActionResult> GetByPeopleId(int peopleId)
         {
             var result = await _customerService.GetCustomerByPeopleIdAsync(peopleId);
-            if (!result.Success)
+            if (!result.IsSuccess)                          // ✅ اصلاح Success به IsSuccess
                 return NotFound(new { success = false, message = result.Message });
 
             return Ok(new { success = true, data = result.Data });

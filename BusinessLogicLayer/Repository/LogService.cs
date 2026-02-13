@@ -11,10 +11,10 @@ namespace BusinessLogicLayer.Repository
 {
     public class LogService : ILogService
     {
-        private readonly IGenericRepository<LogUser> _logRepo;
+        private readonly IRepository<LogUser> _logRepo;
         private readonly DataAccessLayer.Database _context;
 
-        public LogService(IGenericRepository<LogUser> logRepo, DataAccessLayer.Database context)
+        public LogService(IRepository<LogUser> logRepo, DataAccessLayer.Database context)
         {
             _logRepo = logRepo;
             _context = context;
@@ -29,7 +29,8 @@ namespace BusinessLogicLayer.Repository
                 UserId = userId
             };
 
-            await _logRepo.Add(log);
+            await _logRepo.AddAsync(log);          // ✅ استفاده از AddAsync به جای Add
+            await _context.SaveChangesAsync();     // ✅ ذخیره‌سازی تغییرات در دیتابیس
         }
     }
 }

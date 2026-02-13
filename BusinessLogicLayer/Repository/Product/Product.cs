@@ -1,7 +1,10 @@
 ﻿using BusinessEntity.Product;
+using BusinessLogicLayer.DTO;
 using BusinessLogicLayer.Interface;
 using BusinessLogicLayer.Interface.Customer_Club;
+using BusinessLogicLayer.Interface.Producr;
 using DataAccessLayer;
+using DataAccessLayer.Interface;
 using DataAccessLayer.Interface.Customer_Club;
 using DataAccessLayer.Interface.Product;
 using Microsoft.EntityFrameworkCore;
@@ -20,7 +23,7 @@ namespace BusinessLogicLayer.Repository.Product
     //        _logger = logger;
     //    }
     //    //*******SEARCH*******
-   
+
 
     //    public async Task<BusinessEntity.ProductDto?> GetProductByBarcodeAsync(string barcode)
     //    {
@@ -144,7 +147,7 @@ namespace BusinessLogicLayer.Repository.Product
     //        return result;
     //    }
     //}
-    public class ProductService : Interface.Producr.IProductService
+    public class ProductService : IProductService
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IPublicDiscountService _publicDiscountService;
@@ -172,23 +175,25 @@ namespace BusinessLogicLayer.Repository.Product
             _clubDiscountService = clubDiscountService;
         }
 
-
-        public async Task<Result<DTO.ProductBarcodeInfoDto>> GetProductInfoByBarcodeAsync(string barcode, int? customerId = null)
+        public async Task<Result<ProductBarcodeInfoDto>> GetProductInfoByBarcodeAsync(
+     string barcode,
+     int? customerId = null,
+     int? storeId = null)          // ✅ پارامتر storeId اضافه شد
         {
             // 1. یافتن بارکد
             var barcodeEntity = await _unitOfWork.ProductBarcodes.GetByBarcodeAsync(barcode);
             if (barcodeEntity == null)
-                return Result<DTO.ProductBarcodeInfoDto>.Failure("بارکد یافت نشد");
+                return Result<ProductBarcodeInfoDto>.Failure("بارکد یافت نشد");
 
             // 2. یافتن واحد کالا
-            var unitLevel = await _unitOfWork.UnitsLevels.GetByIdAsync(barcodeEntity.UnitLevelId);
+            var unitLevel = await _unitOfWork.UnitsLevels.GetByIdAsync(barcodeEntity.ProductUnitId);
             if (unitLevel == null)
-                return Result<DTO.ProductBarcodeInfoDto>.Failure("واحد کالا یافت نشد");
+                return Result<ProductBarcodeInfoDto>.Failure("واحد کالا یافت نشد");
 
             // 3. یافتن محصول
             var product = await _unitOfWork.Products.GetByIdAsync(unitLevel.ProductId);
             if (product == null)
-                return Result<DTO.ProductBarcodeInfoDto>.Failure("محصول یافت نشد");
+                return Result<ProductBarcodeInfoDto>.Failure("محصول یافت نشد");
 
             // 4. تعیین قیمت اصلی بر اساس سطح قیمتی مشتری (در صورت وجود)
             int originalPrice = 0;
@@ -210,7 +215,6 @@ namespace BusinessLogicLayer.Repository.Product
 
             if (originalPrice == 0)
             {
-                // قیمت پیش‌فرض (سطح 1)
                 var defaultPrice = unitLevel.Prices.FirstOrDefault(p => p.PriceLevelId == 1);
                 originalPrice = defaultPrice != null
                     ? (int)defaultPrice.SalePrice
@@ -221,22 +225,36 @@ namespace BusinessLogicLayer.Repository.Product
             int publicDiscount = 0;
             int clubDiscount = 0;
 
-            // تخفیف عمومی
-            var publicResult = await _publicDiscountService.CalculatePublicDiscountAsync(barcode, DateTime.Now, unitLevel.Product.StoreId); // فرض StoreId
-            if (publicResult.Success)
-                publicDiscount = publicResult.Data.DiscountAmount;
+            // تخفیف عمومی (با استفاده از storeId ورودی)
+            if (storeId.HasValue)
+            {
+                var publicResult = await _publicDiscountService.CalculatePublicDiscountAsync(
+                    barcode,
+                    DateTime.Now,
+                    storeId.Value);                        // ✅ استفاده از storeId ورودی
+                if (publicResult.IsSuccess)
+                    publicDiscount = publicResult.Data.DiscountAmount;
+            }
 
             // تخفیف باشگاه
             if (customerId.HasValue)
             {
-                var clubResult = await _clubDiscountService.CalculateClubDiscountAsync(barcode, customerId.Value, originalPrice - publicDiscount);
-                if (clubResult.Success)
+                var clubResult = await _clubDiscountService.CalculateClubDiscountAsync(
+                    barcode,
+                    customerId.Value,
+                    originalPrice - publicDiscount);
+                if (clubResult.IsSuccess)
                     clubDiscount = clubResult.Data.DiscountAmount;
             }
 
             int finalPrice = originalPrice - publicDiscount - clubDiscount;
 
-            var dto = new DTO.ProductBarcodeInfoDto
+            // ✅ رفع خطای `??` با استفاده از شرط ساده
+            int baseUnitId = unitLevel.UnitProductId != 0
+                ? unitLevel.UnitProductId
+                : product.UnitProductId;
+
+            var dto = new ProductBarcodeInfoDto
             {
                 Barcode = barcode,
                 ProductId = product.Id,
@@ -245,10 +263,10 @@ namespace BusinessLogicLayer.Repository.Product
                 UnitName = unitLevel.Title,
                 ConversionFactor = unitLevel.ConversionFactor,
                 BaseProductId = product.Id,
-                BaseUnitId = unitLevel.UnitProductId ?? product.UnitProductId,
+                BaseUnitId = baseUnitId,                     // ✅ اصلاح شده
                 OriginalPrice = originalPrice,
                 FinalPrice = finalPrice,
-                Discounts = new DTO.DiscountDetailDto
+                Discounts = new DiscountDetailDto
                 {
                     PublicDiscount = publicDiscount,
                     ClubDiscount = clubDiscount,
@@ -258,11 +276,8 @@ namespace BusinessLogicLayer.Repository.Product
                 ImagePath = product.ImagePath
             };
 
-            return Result<DTO.ProductBarcodeInfoDto>.SuccessResult(dto);
+            return Result<ProductBarcodeInfoDto>.Success(dto);
         }
-    
-
-
         public async Task<IEnumerable<BusinessEntity.DTO.Product.ProductSalesByDateDto>> GetProductSalesReportByDateAsync(DateTime startDate, DateTime endDate, string? barcode = null)
         {
             _logger.LogInformation("Request to receive Product with ID: {startDate}{endDate}", startDate, endDate);
@@ -274,6 +289,7 @@ namespace BusinessLogicLayer.Repository.Product
 
             return entity;
         }
+
         public async Task<IEnumerable<BusinessEntity.DTO.Product.ProductInventoryDto>> GetProductInventoryAsync(string? barcode = null)
         {
             _logger.LogInformation("Request to receive Product GetProductInventoryAsync ");
@@ -285,14 +301,17 @@ namespace BusinessLogicLayer.Repository.Product
 
             return entity;
         }
+
         public async Task<IEnumerable<BusinessEntity.Product.Product>> GetAll()
         {
             return await _productRepository.GetAll();
         }
+
         public async Task<BusinessEntity.Product.Product?> GetById(int id)
         {
             return await _productRepository.GetById(id);
         }
+
         public async Task<List<BusinessEntity.Product.Product>> Search(
             string? name = null,
             string? barcode = null,
@@ -310,6 +329,7 @@ namespace BusinessLogicLayer.Repository.Product
                 description, isTax, groupId, storeroomId,
                 unitId, sectionId);
         }
+
         public async Task<Result> Create(BusinessEntity.Product.Product product, int userId)
         {
             using var transaction = await _context.Database.BeginTransactionAsync();
@@ -322,9 +342,9 @@ namespace BusinessLogicLayer.Repository.Product
                     return validationResult;
 
                 // ایجاد محصول
-                var result = await _productRepository.Create(product);
-                if (!result.IsSuccess)
-                    return result;
+                var repoResult = await _productRepository.Create(product);
+                if (!repoResult.IsSuccess)
+                    return Result.Failure(repoResult.Message);   // تبدیل به BusinessLogicLayer.Result
 
                 // ثبت لاگ
                 await _logService.CreateLogAsync(
@@ -341,6 +361,7 @@ namespace BusinessLogicLayer.Repository.Product
                 return Result.Failure($"خطا در ایجاد کالا: {ex.Message}");
             }
         }
+
         public async Task<Result> Update(BusinessEntity.Product.Product product, int userId)
         {
             using var transaction = await _context.Database.BeginTransactionAsync();
@@ -353,9 +374,9 @@ namespace BusinessLogicLayer.Repository.Product
                     return validationResult;
 
                 // به‌روزرسانی محصول
-                var result = await _productRepository.Update(product);
-                if (!result.IsSuccess)
-                    return result;
+                var repoResult = await _productRepository.Update(product);
+                if (!repoResult.IsSuccess)
+                    return Result.Failure(repoResult.Message);
 
                 // ثبت لاگ
                 await _logService.CreateLogAsync(
@@ -372,6 +393,7 @@ namespace BusinessLogicLayer.Repository.Product
                 return Result.Failure($"خطا در به‌روزرسانی کالا: {ex.Message}");
             }
         }
+
         public async Task<Result> Delete(int id, int userId)
         {
             using var transaction = await _context.Database.BeginTransactionAsync();
@@ -384,9 +406,9 @@ namespace BusinessLogicLayer.Repository.Product
                     return Result.Failure("کالا یافت نشد.");
 
                 // حذف محصول
-                var result = await _productRepository.Delete(id);
-                if (!result.IsSuccess)
-                    return result;
+                var repoResult = await _productRepository.Delete(id);
+                if (!repoResult.IsSuccess)
+                    return Result.Failure(repoResult.Message);
 
                 // ثبت لاگ
                 await _logService.CreateLogAsync(
@@ -445,7 +467,7 @@ namespace BusinessLogicLayer.Repository.Product
                     return Result.Failure("ضریب تبدیل باید بزرگتر از صفر باشد.");
             }
 
-            return Result.Success("عملیات با موفقیت انجام شد .");
+            return Result.Success("عملیات با موفقیت انجام شد.");
         }
     }
 }

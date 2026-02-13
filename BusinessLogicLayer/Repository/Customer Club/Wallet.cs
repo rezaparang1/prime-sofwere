@@ -1,6 +1,7 @@
 ﻿using BusinessEntity.Customer_Club;
 using BusinessLogicLayer.DTO;
 using BusinessLogicLayer.Interface.Customer_Club;
+using DataAccessLayer.Interface;
 using DataAccessLayer.Interface.Customer_Club;
 using System;
 using System.Collections.Generic;
@@ -24,13 +25,13 @@ namespace BusinessLogicLayer.Repository.Customer_Club
             var wallet = await _unitOfWork.Wallets.GetByCustomerIdAsync(customerId);
             if (wallet == null)
                 return Result<WalletDto>.Failure("کیف پول یافت نشد");
-            return Result<WalletDto>.SuccessResult(MapToDto(wallet));
+            return Result<WalletDto>.Success(MapToDto(wallet));
         }
 
         public async Task<Result<decimal>> GetBalanceAsync(int customerId)
         {
             var balance = await _unitOfWork.Wallets.GetBalanceAsync(customerId);
-            return Result<decimal>.SuccessResult(balance);
+            return Result<decimal>.Success(balance);
         }
 
         public async Task<Result> DepositAsync(int customerId, decimal amount, string description, int? invoiceId = null)
@@ -59,7 +60,7 @@ namespace BusinessLogicLayer.Repository.Customer_Club
             _unitOfWork.Wallets.Update(wallet);
             await _unitOfWork.SaveChangesAsync();
 
-            return Result.SuccessResult("واریز با موفقیت انجام شد");
+            return Result.Success("واریز با موفقیت انجام شد");
         }
 
         public async Task<Result> WithdrawAsync(int customerId, decimal amount, string description, int? invoiceId = null)
@@ -91,7 +92,7 @@ namespace BusinessLogicLayer.Repository.Customer_Club
             _unitOfWork.Wallets.Update(wallet);
             await _unitOfWork.SaveChangesAsync();
 
-            return Result.SuccessResult("برداشت با موفقیت انجام شد");
+            return Result.Success("برداشت با موفقیت انجام شد");
         }
 
         public async Task<Result> RefundClubDiscountAsync(int customerId, int amount, string description, int clubDiscountId, int invoiceId)
@@ -118,7 +119,7 @@ namespace BusinessLogicLayer.Repository.Customer_Club
             _unitOfWork.Wallets.Update(wallet);
             await _unitOfWork.SaveChangesAsync();
 
-            return Result.SuccessResult("تخفیف باشگاه به کیف پول برگشت داده شد");
+            return Result.Success("تخفیف باشگاه به کیف پول برگشت داده شد");
         }
 
         public async Task<Result<IEnumerable<WalletTransactionDto>>> GetTransactionsAsync(int customerId, int? count = null)
@@ -138,7 +139,7 @@ namespace BusinessLogicLayer.Repository.Customer_Club
                 InvoiceNumber = t.Invoice?.InvoiceNumber
             });
 
-            return Result<IEnumerable<WalletTransactionDto>>.SuccessResult(dtos);
+            return Result<IEnumerable<WalletTransactionDto>>.Success(dtos);
         }
 
         private WalletDto MapToDto(Wallet wallet)

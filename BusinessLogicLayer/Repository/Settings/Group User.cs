@@ -7,13 +7,13 @@ namespace BusinessLogicLayer.Repository.Settings
 {
     public class GroupUserService : BusinessLogicLayer.Interface.Settings.IGroupUserService
     {
-        private readonly IGenericRepository<Group_User> _groupuserRepo;
-        private readonly IGenericRepository<User> _userRepo;
+        private readonly IRepository<Group_User> _groupuserRepo;
+        private readonly IRepository<User> _userRepo;
         private readonly IGenericService<Group_User> _genericService;
 
         public GroupUserService(
-            IGenericRepository<Group_User> bankRepo,
-            IGenericRepository<User> accountRepo,
+            IRepository<Group_User> bankRepo,
+            IRepository<User> accountRepo,
             IGenericService<Group_User> genericService)
         {
             _groupuserRepo = bankRepo;

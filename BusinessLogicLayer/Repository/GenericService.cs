@@ -11,12 +11,12 @@ namespace BusinessLogicLayer.Repository
 {
     public class GenericService<T> : IGenericService<T> where T : class
     {
-        private readonly IGenericRepository<T> _repo;
+        private readonly IRepository<T> _repo;
         private readonly ILogService _logService;
         private readonly Database _context;
 
         public GenericService(
-            IGenericRepository<T> repo,
+            IRepository<T> repo,
             ILogService logService,
             Database context)
         {
@@ -28,16 +28,11 @@ namespace BusinessLogicLayer.Repository
         public async Task<Result> AddWithLogAsync(T entity, string logText, int userId)
         {
             await using var transaction = await _context.Database.BeginTransactionAsync();
-
             try
             {
-                var addResult = await _repo.Add(entity);
-                if (!addResult.IsSuccess)
-                    return addResult;
-
-                await _repo.SaveAsync();
+                await _repo.AddAsync(entity);                // ✅ استفاده از AddAsync
+                await _context.SaveChangesAsync();           // ✅ ذخیره تغییرات
                 await _logService.CreateLogAsync(logText, userId);
-
                 await transaction.CommitAsync();
                 return Result.Success("ثبت انجام شد و لاگ ذخیره شد.");
             }
@@ -51,16 +46,11 @@ namespace BusinessLogicLayer.Repository
         public async Task<Result> UpdateWithLogAsync(T entity, string log, int userId)
         {
             await using var transaction = await _context.Database.BeginTransactionAsync();
-
             try
             {
-                var updateResult = await _repo.Update(entity);
-                if (!updateResult.IsSuccess)
-                    return updateResult;
-
-                await _repo.SaveAsync();
+                _repo.Update(entity);                         // ✅ متد همزمان Update
+                await _context.SaveChangesAsync();            // ✅ ذخیره تغییرات
                 await _logService.CreateLogAsync(log, userId);
-
                 await transaction.CommitAsync();
                 return Result.Success("عملیات با موفقیت انجام شد.");
             }
@@ -74,16 +64,11 @@ namespace BusinessLogicLayer.Repository
         public async Task<Result> DeleteWithLogAsync(T entity, string logText, int userId)
         {
             await using var transaction = await _context.Database.BeginTransactionAsync();
-
             try
             {
-                var delResult = await _repo.Delete(entity);
-                if (!delResult.IsSuccess)
-                    return delResult;
-
-                await _repo.SaveAsync();
+                _repo.Remove(entity);                          // ✅ استفاده از Remove
+                await _context.SaveChangesAsync();             // ✅ ذخیره تغییرات
                 await _logService.CreateLogAsync(logText, userId);
-
                 await transaction.CommitAsync();
                 return Result.Success("حذف انجام شد و لاگ ثبت شد.");
             }

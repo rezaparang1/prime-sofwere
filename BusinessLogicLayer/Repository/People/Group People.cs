@@ -1,5 +1,5 @@
 ﻿using BusinessLogicLayer.Interface;
-using DataAccessLayer;
+using DataAccessLayer.Interface;
 using DataAccessLayer.Interface;
 using BusinessEntity.People;
 
@@ -7,13 +7,13 @@ namespace BusinessLogicLayer.Repository.People
 {
     public class GroupPeopelService : Interface.People.IGroupPeopleService
     {
-        private readonly IGenericRepository<Group_People> _grouppeopleRepo;
-        private readonly IGenericRepository<BusinessEntity.People.People> _peopleRepo;
+        private readonly IRepository<Group_People> _grouppeopleRepo;
+        private readonly IRepository<BusinessEntity.People.People> _peopleRepo;
         private readonly IGenericService<Group_People> _genericService;
 
         public GroupPeopelService(
-            IGenericRepository<Group_People> grouppeopleRepo,
-            IGenericRepository<BusinessEntity.People.People> peopeleRepo,
+            IRepository<Group_People> grouppeopleRepo,
+            IRepository<BusinessEntity.People.People> peopeleRepo,
             IGenericService<Group_People> genericService)
         {
             _grouppeopleRepo = grouppeopleRepo;

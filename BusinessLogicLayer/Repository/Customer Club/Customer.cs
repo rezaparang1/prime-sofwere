@@ -1,6 +1,7 @@
 ﻿using BusinessEntity.Customer_Club;
 using BusinessLogicLayer.DTO;
 using BusinessLogicLayer.Interface.Customer_Club;
+using DataAccessLayer.Interface;              // برای IUnitOfWork
 using DataAccessLayer.Interface.Customer_Club;
 
 
@@ -27,7 +28,7 @@ namespace BusinessLogicLayer.Repository.Customer_Club
 
             // تولید بارکد یکتا
             var barcodeResult = await GenerateCustomerBarcodeAsync();
-            if (!barcodeResult.Success)
+            if (!barcodeResult.IsSuccess)
                 return Result<CustomerDto>.Failure(barcodeResult.Message);
 
             var customer = new Customer
@@ -63,7 +64,7 @@ namespace BusinessLogicLayer.Repository.Customer_Club
             }
 
             var resultDto = await MapToDto(customer);
-            return Result<CustomerDto>.SuccessResult(resultDto, "مشتری با موفقیت ثبت شد");
+            return Result<CustomerDto>.Success(resultDto, "مشتری با موفقیت ثبت شد");
         }
 
         public async Task<Result<string>> GenerateCustomerBarcodeAsync()
@@ -81,7 +82,7 @@ namespace BusinessLogicLayer.Repository.Customer_Club
             if (exists)
                 return Result<string>.Failure("خطا در تولید بارکد یکتا");
 
-            return Result<string>.SuccessResult(barcode);
+            return Result<string>.Success(barcode);
         }
 
         public async Task<Result<CustomerDto>> GetCustomerByBarcodeAsync(string barcode)
@@ -91,7 +92,7 @@ namespace BusinessLogicLayer.Repository.Customer_Club
                 return Result<CustomerDto>.Failure("مشتری با این بارکد یافت نشد");
 
             var dto = await MapToDto(customer);
-            return Result<CustomerDto>.SuccessResult(dto);
+            return Result<CustomerDto>.Success(dto);
         }
 
         public async Task<Result<CustomerDto>> GetCustomerByIdAsync(int id)
@@ -101,18 +102,18 @@ namespace BusinessLogicLayer.Repository.Customer_Club
                 return Result<CustomerDto>.Failure("مشتری یافت نشد");
 
             var dto = await MapToDto(customer);
-            return Result<CustomerDto>.SuccessResult(dto);
+            return Result<CustomerDto>.Success(dto);
         }
 
         public async Task<Result<CustomerDto>> GetCustomerByPeopleIdAsync(int peopleId)
         {
-            var customer = await _unitOfWork.Customers.FindAsync(c => c.PeopleId == peopleId);
-            var cust = customer.FirstOrDefault();
+            var customers = await _unitOfWork.Customers.FindAsync(c => c.PeopleId == peopleId);
+            var cust = customers.FirstOrDefault();
             if (cust == null)
                 return Result<CustomerDto>.Failure("مشتری باشگاه برای این شخص یافت نشد");
 
             var dto = await MapToDto(cust);
-            return Result<CustomerDto>.SuccessResult(dto);
+            return Result<CustomerDto>.Success(dto);
         }
 
         public async Task<Result> UpdateCustomerPointsAsync(int customerId, int points, string description, int? invoiceId = null)
@@ -142,7 +143,7 @@ namespace BusinessLogicLayer.Repository.Customer_Club
             await _unitOfWork.SaveChangesAsync();
 
             await UpgradeCustomerLevelAsync(customerId);
-            return Result.SuccessResult();
+            return Result.Success();
         }
 
         public async Task<Result> UpgradeCustomerLevelAsync(int customerId)
@@ -183,20 +184,20 @@ namespace BusinessLogicLayer.Repository.Customer_Club
                 _unitOfWork.Customers.Update(customer);
                 await _unitOfWork.SaveChangesAsync();
             }
-            return Result.SuccessResult();
+            return Result.Success();
         }
 
         public async Task<Result<CustomerLevelDto?>> GetCustomerCurrentLevelAsync(int customerId)
         {
             var customer = await _unitOfWork.Customers.GetByIdAsync(customerId);
             if (customer?.CustomerLevelId == null)
-                return Result<CustomerLevelDto?>.SuccessResult(null, "مشتری دارای سطح نیست");
+                return Result<CustomerLevelDto?>.Success(null, "مشتری دارای سطح نیست");
 
             var level = await _unitOfWork.CustomerLevels.GetByIdAsync(customer.CustomerLevelId.Value);
             if (level == null)
                 return Result<CustomerLevelDto?>.Failure("سطح یافت نشد");
 
-            return Result<CustomerLevelDto?>.SuccessResult(MapToLevelDto(level));
+            return Result<CustomerLevelDto?>.Success(MapToLevelDto(level));
         }
 
         // ============ متدهای کمکی ============

@@ -1,6 +1,8 @@
 ﻿
 
 
+using BusinessLogicLayer.DTO;
+
 namespace BusinessLogicLayer.Interface.Producr
 {
     public interface IProductService
@@ -13,7 +15,7 @@ namespace BusinessLogicLayer.Interface.Producr
         //Task<BusinessEntity.Product.Product?> GetByShortcutKey(string? ShortcutKey);
         //Task<IEnumerable<BusinessEntity.Product.ProductReportDto>> GetProductReport();
         //Task<BusinessEntity.ProductDto?> GetProductByBarcodeAsync(string Barcode);
-        Task<Result<BusinessLogicLayer.DTO.ProductBarcodeInfoDto>> GetProductInfoByBarcodeAsync(string barcode, int? customerId = null);
+        Task<Result<ProductBarcodeInfoDto>> GetProductInfoByBarcodeAsync(string barcode, int? customerId = null, int? storeId = null);
         Task<IEnumerable<BusinessEntity.Product.Product>> GetAll();
         Task<BusinessEntity.Product.Product?> GetById(int id);
         Task<Result> Create(BusinessEntity.Product.Product product, int userId);

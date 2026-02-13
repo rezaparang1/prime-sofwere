@@ -72,9 +72,9 @@ namespace BusinessLogicLayer.Repository.People
                     return Result.Failure("نوع شخص باید انتخاب شود.");
 
                 // ایجاد شخص
-                var result = await _peopleRepository.Create(person);
-                if (!result.IsSuccess)
-                    return result;
+                var dalResult = await _peopleRepository.Create(person);
+                if (!dalResult.IsSuccess)
+                    return Result.Failure(dalResult.Message);   // ✅ تبدیل به BLL Result
 
                 // ذخیره تغییرات
                 await _context.SaveChangesAsync();
@@ -107,9 +107,9 @@ namespace BusinessLogicLayer.Repository.People
                     return Result.Failure("نام و نام خانوادگی نمی‌تواند خالی باشد.");
 
                 // بروزرسانی شخص
-                var result = await _peopleRepository.Update(person);
-                if (!result.IsSuccess)
-                    return result;
+                var dalResult = await _peopleRepository.Update(person);
+                if (!dalResult.IsSuccess)
+                    return Result.Failure(dalResult.Message);   // ✅ تبدیل به BLL Result
 
                 // ذخیره تغییرات
                 await _context.SaveChangesAsync();
@@ -140,9 +140,9 @@ namespace BusinessLogicLayer.Repository.People
                     return Result.Failure("شخص یافت نشد.");
 
                 // حذف شخص
-                var result = await _peopleRepository.Delete(id);
-                if (!result.IsSuccess)
-                    return result;
+                var dalResult = await _peopleRepository.Delete(id);
+                if (!dalResult.IsSuccess)
+                    return Result.Failure(dalResult.Message);   // ✅ تبدیل به BLL Result
 
                 // ذخیره تغییرات
                 await _context.SaveChangesAsync();

@@ -65,9 +65,9 @@ namespace BusinessLogicLayer.Repository.Fund
                     return Result.Failure("بانک باید انتخاب شود.");
 
                 // ایجاد حساب بانکی
-                var result = await _repository.Create(bankAccount);
-                if (!result.IsSuccess)
-                    return result;
+                var dalResult = await _repository.Create(bankAccount);
+                if (!dalResult.IsSuccess)
+                    return Result.Failure(dalResult.Message);   // ✅ تبدیل به BLL Result
 
                 // ذخیره تغییرات
                 await _context.SaveChangesAsync();
@@ -98,9 +98,9 @@ namespace BusinessLogicLayer.Repository.Fund
                     return Result.Failure("شماره حساب نمی‌تواند خالی باشد.");
 
                 // بروزرسانی حساب بانکی
-                var result = await _repository.Update(bankAccount);
-                if (!result.IsSuccess)
-                    return result;
+                var dalResult = await _repository.Update(bankAccount);
+                if (!dalResult.IsSuccess)
+                    return Result.Failure(dalResult.Message);   // ✅ تبدیل به BLL Result
 
                 // ذخیره تغییرات
                 await _context.SaveChangesAsync();
@@ -132,9 +132,9 @@ namespace BusinessLogicLayer.Repository.Fund
                     return Result.Failure("حساب بانکی یافت نشد.");
 
                 // حذف حساب بانکی
-                var result = await _repository.Delete(id);
-                if (!result.IsSuccess)
-                    return result;
+                var dalResult = await _repository.Delete(id);
+                if (!dalResult.IsSuccess)
+                    return Result.Failure(dalResult.Message);   // ✅ تبدیل به BLL Result
 
                 // ذخیره تغییرات
                 await _context.SaveChangesAsync();
