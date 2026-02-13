@@ -1,6 +1,4 @@
-﻿using DataAccessLayer;
-
-
+﻿
 namespace BusinessLogicLayer.Interface
 {
     public interface IGenericService<T> where T : class

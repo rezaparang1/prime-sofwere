@@ -99,10 +99,10 @@ namespace BusinessLogicLayer.Repository.Customer_Club
 
             // 3. جستجوی تخفیف‌های مخصوص این واحد
             var discounts = new List<ClubDiscount>();
-            if (barcodeEntity.UnitLevelId != null)
+            if (barcodeEntity.ProductUnitId != null)
             {
                 var unitDiscounts = await _unitOfWork.ClubDiscounts
-                    .GetActiveDiscountsByUnitAsync(barcodeEntity.UnitLevelId.Value, now);
+                    .GetActiveDiscountsByUnitAsync(barcodeEntity.ProductUnitId.Value, now);
                 discounts.AddRange(unitDiscounts);
             }
 
@@ -117,8 +117,8 @@ namespace BusinessLogicLayer.Repository.Customer_Club
             // 5. انتخاب اولین تخفیف (می‌توانید منطق انتخاب بهترین تخفیف را پیاده‌سازی کنید)
             var discount = discounts.First();
             var discountProduct = discount.Products.FirstOrDefault(p =>
-                (p.UnitLevelId == barcodeEntity.UnitLevelId) ||
-                (p.ProductId == barcodeEntity.ProductId && p.UnitLevelId == null));
+                (p.UnitLevelId == barcodeEntity.ProductUnitId) ||
+                (p.ProductId == barcodeEntity.pro && p.UnitLevelId == null));
 
             if (discountProduct == null)
                 return Result<ClubDiscountCalculationResult>.SuccessResult(result);

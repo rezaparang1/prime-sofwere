@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -27,6 +28,11 @@ namespace BusinessEntity.Customer_Club
         public decimal TotalPurchaseAmount { get; set; } = 0;
         public int TotalPurchaseCount { get; set; } = 0;
         public DateTime? LastPurchaseDate { get; set; }
+
+        public int? PeopleId { get; set; }
+        [ForeignKey(nameof(PeopleId))]
+        public virtual People.People? People { get; set; }
+
 
         // ارتباطات
         public int? CustomerLevelId { get; set; }

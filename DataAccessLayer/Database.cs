@@ -12,9 +12,9 @@ namespace DataAccessLayer
     {
         public Database(DbContextOptions<Database> options) : base(options)
         {
-            //optionsBuilder.UseNpgsql(configuration.GetConnectionString("DefaultConnection"));
         }
-        //Customer_Club
+
+        // ========== Customer_Club ==========
         public DbSet<BusinessEntity.Customer_Club.ClubDiscount> ClubDiscount { get; set; } = null!;
         public DbSet<BusinessEntity.Customer_Club.ClubDiscountProduct> ClubDiscountProduct { get; set; } = null!;
         public DbSet<BusinessEntity.Customer_Club.Customer> Customer { get; set; } = null!;
@@ -23,26 +23,33 @@ namespace DataAccessLayer
         public DbSet<BusinessEntity.Customer_Club.PointTransaction> PointTransaction { get; set; } = null!;
         public DbSet<BusinessEntity.Customer_Club.PublicDiscount> PublicDiscount { get; set; } = null!;
         public DbSet<BusinessEntity.Customer_Club.PublicDiscountProduct> PublicDiscountProduct { get; set; } = null!;
+        public DbSet<BusinessEntity.Customer_Club.Store> Store { get; set; } = null!; // ✅ اضافه شد
         public DbSet<BusinessEntity.Customer_Club.Wallet> Wallet { get; set; } = null!;
         public DbSet<BusinessEntity.Customer_Club.WalletTransaction> WalletTransaction { get; set; } = null!;
-        //Bank
+
+        // ========== Bank ==========
         public DbSet<BusinessEntity.Fund.Definition_Bank> Definition_Bank { get; set; } = null!;
         public DbSet<BusinessEntity.Fund.Definition_Bank_Account> Definition_Bank_Account { get; set; } = null!;
-        //Financial_Operations
+
+        // ========== Financial_Operations ==========
         public DbSet<BusinessEntity.Invoices.Account> Account { get; set; } = null!;
         public DbSet<BusinessEntity.Invoices.Transaction> Transaction { get; set; } = null!;
-        //Fund
+
+        // ========== Fund ==========
         public DbSet<BusinessEntity.Fund.Fund> Fund { get; set; } = null!;
         public DbSet<BusinessEntity.Fund.Cash_Register_To_The_User> Cash_Register_To_The_User { get; set; } = null!;
         public DbSet<BusinessEntity.Fund.Work_Shift> Work_Shift { get; set; } = null!;
-        //Invoices
+
+        // ========== Invoices ==========
         public DbSet<BusinessEntity.Invoices.Invoices> Invoices { get; set; } = null!;
         public DbSet<BusinessEntity.Invoices.Invoices_Item> Invoices_Item { get; set; } = null!;
-        //People
+
+        // ========== People ==========
         public DbSet<BusinessEntity.People.Type_People> Type_People { get; set; } = null!;
         public DbSet<BusinessEntity.People.Group_People> Group_People { get; set; } = null!;
         public DbSet<BusinessEntity.People.People> People { get; set; } = null!;
-        //Product
+
+        // ========== Product ==========
         public DbSet<BusinessEntity.Product.Group_Product> Group_Product { get; set; } = null!;
         public DbSet<BusinessEntity.Product.PriceLevels> PriceLevels { get; set; } = null!;
         public DbSet<BusinessEntity.Product.Product_Failure_Item> Product_Failure_Item { get; set; } = null!;
@@ -55,7 +62,8 @@ namespace DataAccessLayer
         public DbSet<BusinessEntity.Product.Type_Product> Type_Product { get; set; } = null!;
         public DbSet<BusinessEntity.Product.Unit_Product> Unit_Product { get; set; } = null!;
         public DbSet<BusinessEntity.Product.UnitsLevel> UnitsLevel { get; set; } = null!;
-        //Settigs
+
+        // ========== Settings ==========
         public DbSet<BusinessEntity.Settings.Access_Level> Access_Level { get; set; } = null!;
         public DbSet<BusinessEntity.Settings.Group_User> Group_User { get; set; } = null!;
         public DbSet<BusinessEntity.Settings.LogUser> LogUser { get; set; } = null!;
@@ -64,9 +72,7 @@ namespace DataAccessLayer
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            base.OnModelCreating(modelBuilder);
-
-            base.OnModelCreating(modelBuilder);
+            base.OnModelCreating(modelBuilder); // ✅ فقط یکبار
 
             // اعمال کانفیگ‌های هر موجودیت
             ConfigureCustomer(modelBuilder);
@@ -78,13 +84,14 @@ namespace DataAccessLayer
 
             modelBuilder.Entity<BusinessEntity.Fund.Definition_Bank>(entity =>
             {
-                entity.ToTable("definition_bank"); 
+                entity.ToTable("definition_bank");
                 entity.HasKey(b => b.Id);
                 entity.Property(b => b.Name)
                       .HasColumnName("name")
                       .HasMaxLength(30)
                       .IsRequired();
             });
+
             modelBuilder.Entity<BusinessEntity.Fund.Definition_Bank_Account>(entity =>
             {
                 entity.ToTable("definition_bank_account");
@@ -101,16 +108,15 @@ namespace DataAccessLayer
                 entity.Property(a => a.CardNumber)
                       .HasColumnName("card_number")
                       .HasMaxLength(16);
-                modelBuilder.Entity<BusinessEntity.Fund.Definition_Bank_Account>()
-                 .HasOne(a => a.Bank)
-                 .WithMany(b => b.BankAccounts)
-                 .HasForeignKey(a => a.BankId);
+                entity.HasOne(a => a.Bank)
+                      .WithMany(b => b.BankAccounts)
+                      .HasForeignKey(a => a.BankId);
             });
-            modelBuilder.Entity<BusinessEntity.Invoices.Account>()
-            .HasIndex(a => a.AccountName)
-            .IsUnique();
 
-            // تنظیم نوع عددی برای PostgreSQL
+            modelBuilder.Entity<BusinessEntity.Invoices.Account>()
+                .HasIndex(a => a.AccountName)
+                .IsUnique();
+
             modelBuilder.Entity<BusinessEntity.Invoices.Account>()
                 .Property(a => a.Balance)
                 .HasColumnType("numeric(18,2)");
@@ -118,11 +124,12 @@ namespace DataAccessLayer
             modelBuilder.Entity<BusinessEntity.Invoices.Transaction>()
                 .Property(t => t.Amount)
                 .HasColumnType("numeric(18,2)");
+
             modelBuilder.Entity<BusinessEntity.Fund.Cash_Register_To_The_User>()
-        .HasOne(c => c.User)
-        .WithMany(u => u.CashRegisters)
-        .HasForeignKey(c => c.UserId)
-        .OnDelete(DeleteBehavior.Restrict);
+                .HasOne(c => c.User)
+                .WithMany(u => u.CashRegisters)
+                .HasForeignKey(c => c.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<BusinessEntity.Fund.Cash_Register_To_The_User>()
                 .HasOne(c => c.Fund)
@@ -136,68 +143,69 @@ namespace DataAccessLayer
                 .HasForeignKey(w => w.CashRegisterToUserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-
+            // Invoices
             modelBuilder.Entity<BusinessEntity.Invoices.Invoices>()
-         .HasOne(i => i.Customer)
-         .WithMany(c => c.Invoices)
-         .HasForeignKey(i => i.CustomerId)
-         .OnDelete(DeleteBehavior.Restrict);
+                .HasOne(i => i.Customer)
+                .WithMany(c => c.Invoices)
+                .HasForeignKey(i => i.CustomerId)
+                .OnDelete(DeleteBehavior.Restrict);
 
-            // Invoices → People
             modelBuilder.Entity<BusinessEntity.Invoices.Invoices>()
                 .HasOne(i => i.People)
                 .WithMany(p => p.Invoices)
                 .HasForeignKey(i => i.PeopleId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Invoices → User
             modelBuilder.Entity<BusinessEntity.Invoices.Invoices>()
                 .HasOne(i => i.User)
                 .WithMany(u => u.Invoices)
                 .HasForeignKey(i => i.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Invoices_Item → Invoices
             modelBuilder.Entity<BusinessEntity.Invoices.Invoices_Item>()
                 .HasOne(ii => ii.Invoices)
                 .WithMany(i => i.Invoices_Item)
                 .HasForeignKey(ii => ii.InvoicesId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // Invoices_Item → Product
             modelBuilder.Entity<BusinessEntity.Invoices.Invoices_Item>()
                 .HasOne(ii => ii.Product)
                 .WithMany(p => p.Invoices_Items)
                 .HasForeignKey(ii => ii.ProductId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            // People
             modelBuilder.Entity<People>()
-                 .HasOne(a => a.Group_People)
-                 .WithMany(b => b.People)
-                 .HasForeignKey(a => a.GroupPeopleId);
-            modelBuilder.Entity<People>()
-                 .HasOne(a => a.Type_People)
-                 .WithMany(b => b.People)
-                 .HasForeignKey(a => a.TypePeopleId);
-            modelBuilder.Entity<People>()
-                 .HasOne(a => a.PriceLevel)
-                 .WithMany(b => b.People)
-                 .HasForeignKey(a => a.PriceLevelID);
+                .HasOne(a => a.Group_People)
+                .WithMany(b => b.People)
+                .HasForeignKey(a => a.GroupPeopleId);
 
+            modelBuilder.Entity<People>()
+                .HasOne(a => a.Type_People)
+                .WithMany(b => b.People)
+                .HasForeignKey(a => a.TypePeopleId);
 
+            modelBuilder.Entity<People>()
+                .HasOne(a => a.PriceLevel)
+                .WithMany(b => b.People)
+                .HasForeignKey(a => a.PriceLevelID);
+
+            // Product
             modelBuilder.Entity<Storeroom_Product>()
                 .HasOne(a => a.Section_Product)
                 .WithMany(b => b.Storeroom_Product)
                 .HasForeignKey(a => a.SectionProductId)
-                .OnDelete(DeleteBehavior.Restrict); 
+                .OnDelete(DeleteBehavior.Restrict);
+
             modelBuilder.Entity<Storeroom_Product>()
                 .HasOne(a => a.People)
                 .WithMany(b => b.Storeroom_Product)
                 .HasForeignKey(a => a.PeopleId);
+
             modelBuilder.Entity<Product>()
-           .HasOne(a => a.GroupProduct)
-           .WithMany(b => b.Products)
-           .HasForeignKey(a => a.GroupProductId);
+                .HasOne(a => a.GroupProduct)
+                .WithMany(b => b.Products)
+                .HasForeignKey(a => a.GroupProductId);
 
             modelBuilder.Entity<Product>()
                 .HasOne(a => a.SectionProduct)
@@ -219,44 +227,43 @@ namespace DataAccessLayer
                 .WithMany(b => b.Products)
                 .HasForeignKey(a => a.StoreroomProductId);
 
-            // 🔹 UnitsLevel relationships
+            // UnitsLevel
             modelBuilder.Entity<UnitsLevel>()
                 .HasOne(a => a.Product)
                 .WithMany(b => b.Units)
                 .HasForeignKey(a => a.ProductId)
-                .OnDelete(DeleteBehavior.Cascade); // Cascade insert & delete
+                .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<UnitsLevel>()
                 .HasOne(a => a.UnitProduct)
                 .WithMany(b => b.UnitsLevel)
                 .HasForeignKey(a => a.UnitProductId);
 
-            // 🔹 ProductPrices relationships
+            // ProductPrices
             modelBuilder.Entity<ProductPrices>()
                 .HasOne(a => a.ProductUnit)
                 .WithMany(b => b.Prices)
                 .HasForeignKey(a => a.UnitLevelId)
-                .OnDelete(DeleteBehavior.Cascade); // Cascade insert & delete
+                .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<ProductPrices>()
                 .HasOne(a => a.PriceLevel)
                 .WithMany(b => b.ProductPrices)
                 .HasForeignKey(a => a.PriceLevelId);
 
-            // 🔹 ProductBarcodes relationships
+            // ProductBarcodes
             modelBuilder.Entity<ProductBarcodes>()
                 .HasOne(a => a.ProductUnit)
                 .WithMany(b => b.Barcodes)
                 .HasForeignKey(a => a.ProductUnitId)
-                .OnDelete(DeleteBehavior.Cascade); // مهم برای insert خودکار Barcodes
+                .OnDelete(DeleteBehavior.Cascade);
 
-            // 🔹 Optional: Configure max lengths, required fields
             modelBuilder.Entity<ProductBarcodes>()
                 .Property(b => b.Barcode)
                 .HasMaxLength(60)
                 .IsRequired();
 
-            // 🔹 Optional: Configure decimal precision for prices
+            // Decimal precision
             modelBuilder.Entity<ProductPrices>()
                 .Property(p => p.BuyPrice).HasColumnType("decimal(18,2)");
             modelBuilder.Entity<ProductPrices>()
@@ -271,14 +278,12 @@ namespace DataAccessLayer
             modelBuilder.Entity<Product>()
                 .Property(p => p.SalePrice).HasColumnType("decimal(18,2)");
 
-
-
-
+            // Settings
             modelBuilder.Entity<User>()
-     .HasOne(u => u.Group_User)
-     .WithMany(g => g.Users)
-     .HasForeignKey(u => u.GroupUserId)
-     .OnDelete(DeleteBehavior.Restrict);
+                .HasOne(u => u.Group_User)
+                .WithMany(g => g.Users)
+                .HasForeignKey(u => u.GroupUserId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Group_User>()
                 .HasOne(g => g.AccessLevel)
@@ -308,7 +313,7 @@ namespace DataAccessLayer
                 .HasIndex(u => u.UserName)
                 .IsUnique();
 
-
+            // Soft Delete Query Filter
             foreach (var entityType in modelBuilder.Model.GetEntityTypes())
             {
                 if (typeof(ISoftDelete).IsAssignableFrom(entityType.ClrType))
@@ -331,8 +336,8 @@ namespace DataAccessLayer
                         .Invoke(builder, new object[] { lambda });
                 }
             }
-
         }
+
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             base.OnConfiguring(optionsBuilder);
@@ -342,25 +347,19 @@ namespace DataAccessLayer
                 .LogTo(Console.WriteLine, new[] { DbLoggerCategory.Database.Command.Name },
                        Microsoft.Extensions.Logging.LogLevel.Information);
         }
-        // =============================
-        // 2️⃣ Override SaveChanges
-        // =============================
+
         public override int SaveChanges()
         {
             SoftDeleteInterceptor();
             return base.SaveChanges();
         }
 
-        public override Task<int> SaveChangesAsync(
-            CancellationToken cancellationToken = default)
+        public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
             SoftDeleteInterceptor();
             return base.SaveChangesAsync(cancellationToken);
         }
 
-        // =============================
-        // 3️⃣ Soft Delete Interceptor
-        // =============================
         private void SoftDeleteInterceptor()
         {
             var deletedEntries = ChangeTracker.Entries()
@@ -374,6 +373,10 @@ namespace DataAccessLayer
                 entry.State = EntityState.Modified;
             }
         }
+
+        // =============================
+        // Configurations
+        // =============================
 
         private void ConfigureCustomer(ModelBuilder modelBuilder)
         {
@@ -402,27 +405,37 @@ namespace DataAccessLayer
                 entity.Property(e => e.TotalPurchaseAmount)
                     .HasColumnType("decimal(18,2)");
 
-                // ارتباطات
+                // ارتباط با Wallet
                 entity.HasOne(e => e.Wallet)
                     .WithOne(w => w.Customer)
                     .HasForeignKey<Wallet>(w => w.CustomerId)
                     .OnDelete(DeleteBehavior.Cascade);
 
+                // ارتباط با CustomerLevel
                 entity.HasOne(e => e.CustomerLevel)
                     .WithMany(cl => cl.Customers)
                     .HasForeignKey(e => e.CustomerLevelId)
                     .OnDelete(DeleteBehavior.SetNull);
 
+                // ارتباط با Store
                 entity.HasOne(e => e.Store)
                     .WithMany(s => s.Customers)
                     .HasForeignKey(e => e.StoreId)
                     .OnDelete(DeleteBehavior.Restrict);
 
+                // ✅ ارتباط با People (جدید)
+                entity.HasOne(e => e.People)
+                    .WithMany()
+                    .HasForeignKey(e => e.PeopleId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                // ارتباط با LevelHistories
                 entity.HasMany(e => e.LevelHistories)
                     .WithOne(clh => clh.Customer)
                     .HasForeignKey(clh => clh.CustomerId)
                     .OnDelete(DeleteBehavior.Cascade);
 
+                // ارتباط با PointTransactions
                 entity.HasMany(e => e.PointTransactions)
                     .WithOne(pt => pt.Customer)
                     .HasForeignKey(pt => pt.CustomerId)
@@ -440,7 +453,6 @@ namespace DataAccessLayer
                     .HasColumnType("decimal(18,2)")
                     .HasDefaultValue(0);
 
-                // ارتباطات
                 entity.HasOne(e => e.Customer)
                     .WithOne(c => c.Wallet)
                     .HasForeignKey<Wallet>(e => e.CustomerId)
@@ -462,7 +474,6 @@ namespace DataAccessLayer
                 entity.Property(e => e.Description)
                     .HasMaxLength(500);
 
-                // ارتباطات
                 entity.HasOne(e => e.Wallet)
                     .WithMany(w => w.Transactions)
                     .HasForeignKey(e => e.WalletId)
@@ -496,7 +507,6 @@ namespace DataAccessLayer
                 entity.Property(e => e.Value)
                     .HasColumnType("decimal(18,2)");
 
-                // ارتباطات
                 entity.HasOne(e => e.Store)
                     .WithMany(s => s.ClubDiscounts)
                     .HasForeignKey(e => e.StoreId)
@@ -518,7 +528,6 @@ namespace DataAccessLayer
                 entity.Property(e => e.OriginalPrice)
                     .HasColumnType("decimal(18,2)");
 
-                // ارتباطات
                 entity.HasOne(e => e.ClubDiscount)
                     .WithMany(cd => cd.Products)
                     .HasForeignKey(e => e.ClubDiscountId)
@@ -527,6 +536,12 @@ namespace DataAccessLayer
                 entity.HasOne(e => e.Product)
                     .WithMany()
                     .HasForeignKey(e => e.ProductId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                // ✅ اضافه کردن ارتباط با UnitLevel
+                entity.HasOne(e => e.UnitLevel)
+                    .WithMany()
+                    .HasForeignKey(e => e.UnitLevelId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
         }
@@ -547,7 +562,6 @@ namespace DataAccessLayer
                 entity.Property(e => e.Value)
                     .HasColumnType("decimal(18,2)");
 
-                // ارتباطات
                 entity.HasOne(e => e.Store)
                     .WithMany(s => s.PublicDiscounts)
                     .HasForeignKey(e => e.StoreId)
@@ -569,7 +583,6 @@ namespace DataAccessLayer
                 entity.Property(e => e.OriginalPrice)
                     .HasColumnType("decimal(18,2)");
 
-                // ارتباطات
                 entity.HasOne(e => e.PublicDiscount)
                     .WithMany(pd => pd.Products)
                     .HasForeignKey(e => e.PublicDiscountId)
@@ -578,6 +591,12 @@ namespace DataAccessLayer
                 entity.HasOne(e => e.Product)
                     .WithMany()
                     .HasForeignKey(e => e.ProductId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                // ✅ اضافه کردن ارتباط با UnitLevel
+                entity.HasOne(e => e.UnitLevel)
+                    .WithMany()
+                    .HasForeignKey(e => e.UnitLevelId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
         }
@@ -595,7 +614,6 @@ namespace DataAccessLayer
                 entity.Property(e => e.Description)
                     .HasMaxLength(500);
 
-                // ارتباطات
                 entity.HasOne(e => e.Store)
                     .WithMany(s => s.CustomerLevels)
                     .HasForeignKey(e => e.StoreId)
@@ -616,7 +634,6 @@ namespace DataAccessLayer
             {
                 entity.HasKey(e => e.Id);
 
-                // ارتباطات
                 entity.HasOne(e => e.Customer)
                     .WithMany(c => c.LevelHistories)
                     .HasForeignKey(e => e.CustomerId)
@@ -638,7 +655,6 @@ namespace DataAccessLayer
                 entity.Property(e => e.Description)
                     .HasMaxLength(500);
 
-                // ارتباطات
                 entity.HasOne(e => e.Customer)
                     .WithMany(c => c.PointTransactions)
                     .HasForeignKey(e => e.CustomerId)

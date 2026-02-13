@@ -1,5 +1,4 @@
-﻿using DataAccessLayer;
-using BusinessEntity.Settings;
+﻿using BusinessEntity.Settings;
 
 namespace BusinessLogicLayer.Interface.Settings
 {

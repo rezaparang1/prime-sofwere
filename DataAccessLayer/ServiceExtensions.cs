@@ -41,7 +41,7 @@ namespace DataAccessLayer
                 }
             });
 
-            services.AddScoped<IUnitOfWork, UnitOfWork>();
+            services.AddScoped<DataAccessLayer.Interface.IUnitOfWork, DataAccessLayer.Repository.UnitOfWork>();
             services.AddScoped<ICustomerRepository, CustomerRepository>();
             services.AddScoped<IWalletRepository, WalletRepository>();
             services.AddScoped<IClubDiscountRepository, ClubDiscountRepository>();

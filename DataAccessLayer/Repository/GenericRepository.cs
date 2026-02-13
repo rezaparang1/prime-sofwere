@@ -9,66 +9,123 @@ using System.Threading.Tasks;
 
 namespace DataAccessLayer.Repository
 {
-    public class GenericRepository<T> : IGenericRepository<T> where T : class
+    public class Repository<T> : IRepository<T> where T : class
     {
-        private readonly Database _context;
-        private readonly DbSet<T> _dbSet;
+        protected readonly Database _context;
+        protected readonly DbSet<T> _dbSet;
 
-        public GenericRepository(Database context)
+        public Repository(Database context)
         {
             _context = context;
-            _dbSet = _context.Set<T>();
+            _dbSet = context.Set<T>();
         }
 
-        public async Task<IEnumerable<T>> GetAllAsync()
-            => await _dbSet.ToListAsync();
-
-        public async Task<T> GetByIdAsync(int id)
-            => await _dbSet.FindAsync(id);
-
-        public async Task<IEnumerable<T>> FindAsync(Expression<Func<T, bool>> predicate)
-            => await _dbSet.Where(predicate).ToListAsync();
-
-        public async Task<Result> Add(T entity)
+        // ========== Get Methods ==========
+        public async Task<T?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
         {
-            try
-            {
-                await _dbSet.AddAsync(entity);
-                return Result.Success("عملیات با موفقیت انجام شد.");
-            }
-            catch (Exception ex)
-            {
-                return Result.Failure($"خطا در انجام عملیات: {ex.Message}");
-            }
+            return await _dbSet.FindAsync(new object[] { id }, cancellationToken);
         }
 
-        public Task<Result> Update(T entity)
+        public async Task<T?> GetByIdAsync(int id,
+                                           CancellationToken cancellationToken = default,
+                                           params Expression<Func<T, object>>[] includes)
         {
-            try
-            {
-                _dbSet.Update(entity);
-                return Task.FromResult(Result.Success("عملیات با موفقیت انجام شد."));
-            }
-            catch (Exception ex)
-            {
-                return Task.FromResult(Result.Failure($"خطا در انجام عملیات: {ex.Message}"));
-            }
+            IQueryable<T> query = _dbSet;
+            foreach (var include in includes)
+                query = query.Include(include);
+
+            return await query.FirstOrDefaultAsync(e => EF.Property<int>(e, "Id") == id, cancellationToken);
         }
 
-        public Task<Result> Delete(T entity)
+        public async Task<IEnumerable<T>> GetAllAsync(CancellationToken cancellationToken = default)
         {
-            try
-            {
-                _dbSet.Remove(entity);
-                return Task.FromResult(Result.Success("عملیات با موفقیت انجام شد."));
-            }
-            catch (Exception ex)
-            {
-                return Task.FromResult(Result.Failure($"خطا در انجام عملیات: {ex.Message}"));
-            }
+            return await _dbSet.ToListAsync(cancellationToken);
         }
 
-        public async Task SaveAsync()
-            => await _context.SaveChangesAsync();
+        public async Task<IEnumerable<T>> GetAllAsync(CancellationToken cancellationToken = default,
+                                                      params Expression<Func<T, object>>[] includes)
+        {
+            IQueryable<T> query = _dbSet;
+            foreach (var include in includes)
+                query = query.Include(include);
+
+            return await query.ToListAsync(cancellationToken);
+        }
+
+        // ========== Find Methods ==========
+        public async Task<IEnumerable<T>> FindAsync(Expression<Func<T, bool>> predicate,
+                                                    CancellationToken cancellationToken = default)
+        {
+            return await _dbSet.Where(predicate).ToListAsync(cancellationToken);
+        }
+
+        public async Task<IEnumerable<T>> FindAsync(Expression<Func<T, bool>> predicate,
+                                                    CancellationToken cancellationToken = default,
+                                                    params Expression<Func<T, object>>[] includes)
+        {
+            IQueryable<T> query = _dbSet;
+            foreach (var include in includes)
+                query = query.Include(include);
+
+            return await query.Where(predicate).ToListAsync(cancellationToken);
+        }
+
+        public async Task<T?> SingleOrDefaultAsync(Expression<Func<T, bool>> predicate,
+                                                   CancellationToken cancellationToken = default)
+        {
+            return await _dbSet.SingleOrDefaultAsync(predicate, cancellationToken);
+        }
+
+        public async Task<T?> FirstOrDefaultAsync(Expression<Func<T, bool>> predicate,
+                                                  CancellationToken cancellationToken = default)
+        {
+            return await _dbSet.FirstOrDefaultAsync(predicate, cancellationToken);
+        }
+
+        // ========== Add Methods ==========
+        public async Task AddAsync(T entity, CancellationToken cancellationToken = default)
+        {
+            await _dbSet.AddAsync(entity, cancellationToken);
+        }
+
+        public async Task AddRangeAsync(IEnumerable<T> entities, CancellationToken cancellationToken = default)
+        {
+            await _dbSet.AddRangeAsync(entities, cancellationToken);
+        }
+
+        // ========== Update Methods ==========
+        public void Update(T entity)
+        {
+            _dbSet.Update(entity);
+        }
+
+        public void UpdateRange(IEnumerable<T> entities)
+        {
+            _dbSet.UpdateRange(entities);
+        }
+
+        // ========== Remove Methods ==========
+        public void Remove(T entity)
+        {
+            _dbSet.Remove(entity);
+        }
+
+        public void RemoveRange(IEnumerable<T> entities)
+        {
+            _dbSet.RemoveRange(entities);
+        }
+
+        // ========== Check & Count ==========
+        public async Task<bool> AnyAsync(Expression<Func<T, bool>> predicate,
+                                         CancellationToken cancellationToken = default)
+        {
+            return await _dbSet.AnyAsync(predicate, cancellationToken);
+        }
+
+        public async Task<int> CountAsync(Expression<Func<T, bool>> predicate,
+                                          CancellationToken cancellationToken = default)
+        {
+            return await _dbSet.CountAsync(predicate, cancellationToken);
+        }
     }
 }

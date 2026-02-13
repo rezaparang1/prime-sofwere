@@ -1,5 +1,4 @@
 ﻿using BusinessEntity.DTO.Bank;
-using DataAccessLayer;
 using BusinessEntity.Fund;
 
 namespace BusinessLogicLayer.Interface.Fund

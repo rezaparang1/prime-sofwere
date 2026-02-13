@@ -1,13 +1,13 @@
 ﻿using BusinessEntity.Customer_Club;
+using DataAccessLayer.Interface;
 using DataAccessLayer.Interface.Customer_Club;
 using DataAccessLayer.Interface.Product_and_Peopel;
+using DataAccessLayer.Repository.Customer_Club;
 using DataAccessLayer.Repository.Product_and_Peopel;
 using Microsoft.EntityFrameworkCore.Storage;
-using BusinessEntity.People;
 using BusinessEntity.Product;
-using BusinessEntity.Invoices;
 
-namespace DataAccessLayer.Repository.Customer_Club
+namespace DataAccessLayer.Repository
 {
     public class UnitOfWork : IUnitOfWork
     {
@@ -18,7 +18,7 @@ namespace DataAccessLayer.Repository.Customer_Club
         {
             _context = context;
 
-            // ========== ریپازیتوری‌های باشگاه مشتریان ==========
+            // ========== باشگاه مشتریان ==========
             Stores = new Repository<Store>(_context);
             Customers = new CustomerRepository(_context);
             CustomerLevels = new Repository<CustomerLevel>(_context);
@@ -31,22 +31,22 @@ namespace DataAccessLayer.Repository.Customer_Club
             PublicDiscountProducts = new Repository<PublicDiscountProduct>(_context);
             PointTransactions = new Repository<PointTransaction>(_context);
 
-            // ========== ریپازیتوری‌های محصولات و قیمت‌گذاری ==========
+            // ========== محصولات و قیمت‌گذاری ==========
             Products = new Repository<BusinessEntity.Product.Product>(_context);
             UnitsLevels = new Repository<UnitsLevel>(_context);
-            ProductBarcodes = new ProductBarcodeRepository(_context);
+            ProductBarcodes = new ProductBarcodeRepository(_context); // بعد از انتقال
             PriceLevels = new Repository<PriceLevels>(_context);
             ProductPrices = new Repository<ProductPrices>(_context);
 
-            // ========== ریپازیتوری اشخاص ==========
-            People = new Repository<People>(_context);
+            // ========== اشخاص ==========
+            People = new Repository<BusinessEntity.People.People>(_context);
 
-            // ========== ریپازیتوری‌های فاکتور ==========
+            // ========== فاکتور ==========
             Invoices = new Repository<BusinessEntity.Invoices.Invoices>(_context);
-            InvoiceItems = new Repository<Invoices_Item>(_context);
+            InvoiceItems = new Repository<BusinessEntity.Invoices.Invoices_Item>(_context);
         }
 
-        // ========== ریپازیتوری‌های باشگاه مشتریان ==========
+        // ========== پراپرتی‌ها ==========
         public IRepository<Store> Stores { get; }
         public ICustomerRepository Customers { get; }
         public IRepository<CustomerLevel> CustomerLevels { get; }
@@ -58,28 +58,20 @@ namespace DataAccessLayer.Repository.Customer_Club
         public IPublicDiscountRepository PublicDiscounts { get; }
         public IRepository<PublicDiscountProduct> PublicDiscountProducts { get; }
         public IRepository<PointTransaction> PointTransactions { get; }
-
-        // ========== ریپازیتوری‌های محصولات و قیمت‌گذاری ==========
         public IRepository<BusinessEntity.Product.Product> Products { get; }
         public IRepository<UnitsLevel> UnitsLevels { get; }
         public IProductBarcodeRepository ProductBarcodes { get; }
         public IRepository<PriceLevels> PriceLevels { get; }
         public IRepository<ProductPrices> ProductPrices { get; }
-
-        // ========== ریپازیتوری اشخاص ==========
-        public IRepository<People> People { get; }
-
-        // ========== ریپازیتوری‌های فاکتور ==========
+        public IRepository<BusinessEntity.People.People> People { get; }
         public IRepository<BusinessEntity.Invoices.Invoices> Invoices { get; }
-        public IRepository<Invoices_Item> InvoiceItems { get; }
+        public IRepository<BusinessEntity.Invoices.Invoices_Item> InvoiceItems { get; }
 
-        // ========== مدیریت تراکنش‌ها ==========
+        // ========== تراکنش ==========
         public async Task BeginTransactionAsync()
         {
             if (_transaction == null)
-            {
                 _transaction = await _context.Database.BeginTransactionAsync();
-            }
         }
 
         public async Task CommitTransactionAsync()
@@ -119,3 +111,4 @@ namespace DataAccessLayer.Repository.Customer_Club
         }
     }
 }
+

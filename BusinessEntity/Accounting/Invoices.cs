@@ -23,8 +23,8 @@ namespace BusinessEntity.Invoices
         public int TotalSum { get; set; }
         public bool IsUpdate { get; set; }
        
-        public int CustomerId { get; set; }
-        public Customer_Club.Customer Customer { get; set; } = null!;
+        public int? CustomerId { get; set; }
+        public Customer_Club.Customer? Customer { get; set; } = null!;
 
         public int UserId { get; set; }
         public Settings.User? User { get; set; } = null!;

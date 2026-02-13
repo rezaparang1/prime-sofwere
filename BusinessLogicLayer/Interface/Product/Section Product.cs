@@ -1,5 +1,4 @@
-﻿using DataAccessLayer;
-using BusinessEntity.Product;
+﻿using BusinessEntity.Product;
 
 namespace BusinessLogicLayer.Interface.Producr
 {

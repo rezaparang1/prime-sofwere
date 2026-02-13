@@ -1,13 +1,17 @@
 ﻿using BusinessEntity.Customer_Club;
+using DataAccessLayer.Interface.Customer_Club;
 using DataAccessLayer.Interface.Product_and_Peopel;
-using BusinessEntity.Product;
-using BusinessEntity.People;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
-namespace DataAccessLayer.Interface.Customer_Club
+namespace DataAccessLayer.Interface
 {
     public interface IUnitOfWork : IDisposable
     {
-        // ========== ریپازیتوری‌های باشگاه مشتریان ==========
+        // ========== باشگاه مشتریان ==========
         ICustomerRepository Customers { get; }
         IRepository<CustomerLevel> CustomerLevels { get; }
         IRepository<CustomerLevelHistory> CustomerLevelHistories { get; }
@@ -20,26 +24,24 @@ namespace DataAccessLayer.Interface.Customer_Club
         IRepository<PointTransaction> PointTransactions { get; }
         IRepository<Store> Stores { get; }
 
-        // ========== ریپازیتوری‌های محصولات و قیمت‌گذاری ==========
-        IRepository<BusinessEntity.Product.Product> Products { get; }        // یکبار تعریف شده
-        IRepository<UnitsLevel> UnitsLevels { get; }
-        IProductBarcodeRepository ProductBarcodes { get; }
-        IRepository<PriceLevels> PriceLevels { get; }
-        IRepository<ProductPrices> ProductPrices { get; }
+        // ========== محصولات و قیمت‌گذاری ==========
+        IRepository<BusinessEntity.Product.Product> Products { get; }
+        IRepository<BusinessEntity.Product.UnitsLevel> UnitsLevels { get; }
+        IProductBarcodeRepository ProductBarcodes { get; }   // ✅ از Namespace اصلاح‌شده
+        IRepository<BusinessEntity.Product.PriceLevels> PriceLevels { get; }
+        IRepository<BusinessEntity.Product.ProductPrices> ProductPrices { get; }
 
-        // ========== ریپازیتوری اشخاص (People) ==========
-        IRepository<BusinessEntity.People.People> People { get; }           // با Namespace کامل
+        // ========== اشخاص ==========
+        IRepository<BusinessEntity.People.People> People { get; }
 
-        // ========== ریپازیتوری‌های فاکتور ==========
+        // ========== فاکتور ==========
         IRepository<BusinessEntity.Invoices.Invoices> Invoices { get; }
         IRepository<BusinessEntity.Invoices.Invoices_Item> InvoiceItems { get; }
 
-        // ========== مدیریت تراکنش‌ها ==========
+        // ========== تراکنش ==========
         Task BeginTransactionAsync();
         Task CommitTransactionAsync();
         Task RollbackTransactionAsync();
-
-        // ========== ذخیره تغییرات ==========
         Task<int> SaveChangesAsync();
         Task<int> SaveChangesAsync(CancellationToken cancellationToken);
     }

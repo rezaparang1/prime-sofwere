@@ -1,5 +1,4 @@
-﻿using DataAccessLayer;
-using BusinessEntity.Fund;
+﻿using BusinessEntity.Fund;
 
 namespace BusinessLogicLayer.Interface.Fund
 {

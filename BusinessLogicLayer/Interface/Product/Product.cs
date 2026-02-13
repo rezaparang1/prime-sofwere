@@ -1,12 +1,4 @@
-﻿using BusinessEntity.Product;
-using BusinessLogicLayer.DTO;
-using DataAccessLayer;
-using DataAccessLayer.Interface.Product;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿
 
 
 namespace BusinessLogicLayer.Interface.Producr
@@ -21,13 +13,13 @@ namespace BusinessLogicLayer.Interface.Producr
         //Task<BusinessEntity.Product.Product?> GetByShortcutKey(string? ShortcutKey);
         //Task<IEnumerable<BusinessEntity.Product.ProductReportDto>> GetProductReport();
         //Task<BusinessEntity.ProductDto?> GetProductByBarcodeAsync(string Barcode);
-        Task<Result<ProductBarcodeInfoDto>> GetProductInfoByBarcodeAsync(string barcode, int? customerId = null);
-        Task<IEnumerable<Product>> GetAll();
-        Task<Product?> GetById(int id);
-        Task<Result> Create(Product product, int userId);
-        Task<Result> Update(Product product, int userId);
-        Task<Result> Delete(int id, int userId);
-        Task<List<Product>> Search(
+        Task<Result<BusinessLogicLayer.DTO.ProductBarcodeInfoDto>> GetProductInfoByBarcodeAsync(string barcode, int? customerId = null);
+        Task<IEnumerable<BusinessEntity.Product.Product>> GetAll();
+        Task<BusinessEntity.Product.Product?> GetById(int id);
+        Task<Result> Create(BusinessEntity.Product.Product product, int userId);
+        Task<Result> Update(BusinessEntity.Product.Product product, int userId);
+        Task<Result> Delete(int id, int userId); 
+        Task<List<BusinessEntity.Product.Product>> Search(
             string? name = null,
             string? barcode = null,
             int? typeProductId = null,
@@ -38,6 +30,6 @@ namespace BusinessLogicLayer.Interface.Producr
             int? storeroomId = null,
             int? unitId = null,
             int? sectionId = null);
-        Task<List<Product>> GetProductsForCombo();
+        Task<List<BusinessEntity.Product.Product>> GetProductsForCombo();
     }
 }

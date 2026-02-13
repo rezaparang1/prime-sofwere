@@ -1,5 +1,4 @@
-﻿using DataAccessLayer;
-using BusinessEntity.People;
+﻿using BusinessEntity.People;
 
 namespace BusinessLogicLayer.Interface.People
 {
