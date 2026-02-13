@@ -1,0 +1,16 @@
+﻿using BusinessEntity.Product;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace BusinessEntity.DTO.Product
+{
+    public class ProductSalesDto
+    {
+        public int ProductId { get; set; }
+        public string ProductName { get; set; } = string.Empty;
+        public List<SalePerDayDto> Sales { get; set; } = new List<SalePerDayDto>();
+    }
+}

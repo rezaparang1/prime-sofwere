@@ -10,10 +10,11 @@ namespace DataAccessLayer.Interface.Settings
     public interface IUserRepository
     {
         Task<List<UserComboDto>> GetActiveUsersAsync();
-        Task<BusinessEntity.Settings.User?> FindByUserNameAndPassword(string? UserName = null, string? Password = null);
-        Task<IEnumerable<BusinessEntity.Settings.User>> GetAll();
-        Task<BusinessEntity.Settings.User?> GetById(int id);
-        Task<string> Create(int UserId ,BusinessEntity.Settings.User User);
-        Task<string> Update(int UserId ,BusinessEntity.Settings.User User);
+        Task<User?> FindByUserNameAndPassword(string? userName = null, string? password = null);
+        Task<IEnumerable<User>> GetAll();
+        Task<User?> GetById(int id);
+        Task<Result> Create(User user);
+        Task<Result> Update(User user);
+        Task<Result> Delete(int id);
     }
 }

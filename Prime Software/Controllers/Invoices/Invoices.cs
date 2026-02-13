@@ -1,7 +1,7 @@
 ﻿using BusinessEntity;
 using BusinessLogicLayer;
 using BusinessLogicLayer.Interface.Invoices;
-using BusinessLogicLayer.Repository.Bank;
+using BusinessLogicLayer.Repository.Fund;
 using BusinessLogicLayer.Repository.Invoices;
 using Microsoft.AspNetCore.Authentication.OAuth.Claims;
 using Microsoft.AspNetCore.Authorization;

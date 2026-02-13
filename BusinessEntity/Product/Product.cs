@@ -31,7 +31,7 @@ namespace BusinessEntity.Product
         public decimal BuyPrice { get; set; }
         public decimal Profit { get; set; }
         public decimal SalePrice { get; set; }
-
+        public bool IsDelete { get; set; }
         public bool IsActive { get; set; }
         public bool IsTax { get; set; }
         public decimal Tax { get; set; }
@@ -42,7 +42,7 @@ namespace BusinessEntity.Product
         public int Inventory { get; set; }
         public int MinInventory { get; set; }
         public int MaxInventory { get; set; }
-
+        public DateTime Date {  get; set; }
         public string Description { get; set; } = string.Empty;
         public string ImagePath { get; set; } = string.Empty;
         public string ShortcutKey { get; set; } = string.Empty;

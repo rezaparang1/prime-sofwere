@@ -1,7 +1,8 @@
 ﻿using AutoMapper;
 using BusinessEntity;
 using BusinessLogicLayer;
-using BusinessLogicLayer.Repository.Bank;
+using BusinessLogicLayer.Interface.Producr;
+using BusinessLogicLayer.Repository.Fund;
 using Microsoft.AspNetCore.Authentication.OAuth.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -13,46 +14,30 @@ namespace Prime_Software.Controllers.Peoduct
     [Route("api/Product/Product")]
     [ApiController]
     [Authorize]
-    public class Product : ControllerBase
+    public class ProductController : ControllerBase
     {
         private readonly ICurrentUserService _currentUser;
-        private readonly BusinessLogicLayer.Interface.Producr.IProductService _ProductService;
-        private readonly ILogger<Product> _logger;
-        private readonly IMapper _mapper;
-        public Product(ICurrentUserService currentUser, IMapper mapper, BusinessLogicLayer.Interface.Producr.IProductService ProductService, ILogger<Product> logger)
+        private readonly IProductService _productService;
+
+        public ProductController(
+            ICurrentUserService currentUser,
+            IProductService productService)
         {
             _currentUser = currentUser;
-            _ProductService = ProductService;
-            _logger = logger;
-            _mapper = mapper;
+            _productService = productService;
         }
-        [HttpGet]
-        public async Task<IActionResult> GetAll()
-        {
-            _logger.LogInformation("Request to receive all Product");
-            var getall = await _ProductService.GetAll();
-            _logger.LogInformation("{Count} items received", getall.Count());
-            return Ok(getall);
-        }
-        [HttpGet("product")]
-        public async Task<IActionResult> GetProductReport()
-        {
-            _logger.LogInformation("Request to receive all Product");
-            var getall = await _ProductService.GetProductReport();
-            _logger.LogInformation("{Count} items received", getall.Count());
-            return Ok(getall);
-        }
+
+
         [HttpGet("sales")]
-        public async Task<IActionResult> GetSalesReport([FromQuery] DateTime startDate, [FromQuery] DateTime endDate , [FromQuery] string? barcode = null)
+        public async Task<IActionResult> GetSalesReport([FromQuery] DateTime startDate, [FromQuery] DateTime endDate, [FromQuery] string? barcode = null)
         {
             if (startDate > endDate)
             {
                 return BadRequest("تاریخ شروع نباید بعد از تاریخ پایان باشد.");
             }
 
-            _logger.LogInformation("Received sales report request from {Start} to {End}.", startDate, endDate);
-
-            var report = await _ProductService.GetProductSalesReportByDateAsync(startDate, endDate , barcode);
+           
+            var report = await _productService.GetProductSalesReportByDateAsync(startDate, endDate, barcode);
 
             if (!report.Any())
                 return NotFound("در این بازه زمانی فروشی ثبت نشده است.");
@@ -62,67 +47,232 @@ namespace Prime_Software.Controllers.Peoduct
         [HttpGet("inventory")]
         public async Task<IActionResult> GetProductInventoryAsync([FromQuery] string? barcode = null)
         {
-            
-            _logger.LogInformation("Received sales report request from GetProductInventoryAsync {barcode}.", barcode);
 
-            var report = await _ProductService.GetProductInventoryAsync(barcode);
+           
+            var report = await _productService.GetProductInventoryAsync(barcode);
 
             if (!report.Any())
                 return NotFound("موردی پیدا نشد .");
 
             return Ok(report);
         }
-        [HttpGet("{id}")]
-        public async Task<ActionResult<BusinessEntity.Product.Product>> GetById(int id)
+
+      //  GET: api/Product
+       [HttpGet]
+        public async Task<IActionResult> GetAll()
         {
-            _logger.LogInformation("Request to receive Product with ID: {Id}", id);
-            var getbyid = await _ProductService.GetById(id);
-            if (getbyid == null)
+            try
             {
-                _logger.LogWarning("Product with ID {Id} not found.", id);
-                return NotFound();
+                var result = await _productService.GetAll();
+                return Ok(result);
             }
-            return Ok(getbyid);
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    message = "خطای داخلی سرور",
+                    error = ex.Message
+                });
+            }
         }
+
+        // GET: api/Product/5
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetById(int id)
+        {
+            try
+            {
+                var result = await _productService.GetById(id);
+                if (result == null)
+                    return NotFound(new { message = "کالا یافت نشد." });
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    message = "خطای داخلی سرور",
+                    error = ex.Message
+                });
+            }
+        }
+
+        // GET: api/Product/combo
+        [HttpGet("combo")]
+        public async Task<IActionResult> GetProductsForCombo()
+        {
+            try
+            {
+                var result = await _productService.GetProductsForCombo();
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    message = "خطای داخلی سرور",
+                    error = ex.Message
+                });
+            }
+        }
+
+        // GET: api/Product/search
+        [HttpGet("search")]
+        public async Task<IActionResult> Search(
+            [FromQuery] string? name = null,
+            [FromQuery] string? barcode = null,
+            [FromQuery] int? typeProductId = null,
+            [FromQuery] bool? isActive = null,
+            [FromQuery] string? description = null,
+            [FromQuery] bool? isTax = null,
+            [FromQuery] int? groupId = null,
+            [FromQuery] int? storeroomId = null,
+            [FromQuery] int? unitId = null,
+            [FromQuery] int? sectionId = null)
+        {
+            try
+            {
+                var result = await _productService.Search(
+                    name, barcode, typeProductId, isActive,
+                    description, isTax, groupId, storeroomId,
+                    unitId, sectionId);
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    message = "خطای داخلی سرور",
+                    error = ex.Message
+                });
+            }
+        }
+
+        // POST: api/Product
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] DTO.Product.Product dto)
+        public async Task<IActionResult> Create([FromBody] BusinessEntity.Product.Product product)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+            try
+            {
+                if (!ModelState.IsValid)
+                    return BadRequest(new
+                    {
+                        message = "داده‌های ارسالی معتبر نیستند.",
+                        errors = ModelState.Values
+                            .SelectMany(v => v.Errors)
+                            .Select(e => e.ErrorMessage)
+                    });
 
-            var userId = _currentUser.UserId!.Value;
+                var userId = _currentUser.UserId ?? throw new UnauthorizedAccessException("کاربر شناسایی نشد.");
+                var result = await _productService.Create(product, userId);
 
-            var product = _mapper.Map<BusinessEntity.Product.Product>(dto); // AutoMapper استفاده کن
+                if (!result.IsSuccess)
+                    return BadRequest(new { message = result.Message });
 
-            var result = await _ProductService.Create(userId, product);
-
-            if (!result.Success)
-                return BadRequest(new { success = false, message = result.Message });
-
-            return Ok(new { success = true, message = result.Message });
+                return CreatedAtAction(
+                    nameof(GetById),
+                    new { id = product.Id },
+                    new
+                    {
+                        message = result.Message,
+                        productId = product.Id,
+                    });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    message = "خطای داخلی سرور",
+                    error = ex.Message
+                });
+            }
         }
-        [HttpGet("barcode/{barcode}")]
-        public async Task<IActionResult> GetByBarcode(string barcode)
+
+        // PUT: api/Product/5
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(int id, [FromBody] BusinessEntity.Product.Product product)
         {
-            if (string.IsNullOrWhiteSpace(barcode))
-                return BadRequest("بارکد نمی‌تواند خالی باشد.");
+            try
+            {
+                if (!ModelState.IsValid)
+                    return BadRequest(new
+                    {
+                        message = "داده‌های ارسالی معتبر نیستند.",
+                        errors = ModelState.Values
+                            .SelectMany(v => v.Errors)
+                            .Select(e => e.ErrorMessage)
+                    });
 
-            var product = await _ProductService.GetProductByBarcodeAsync(barcode);
+                if (id != product.Id)
+                    return BadRequest(new { message = "شناسه ارسال شده با شناسه کالا مطابقت ندارد." });
 
-            if (product == null)
-                return NotFound($"محصول با بارکد {barcode} یافت نشد.");
+                var userId = _currentUser.UserId ?? throw new UnauthorizedAccessException("کاربر شناسایی نشد.");
+                var result = await _productService.Update(product, userId);
 
-            return Ok(product);
+                if (!result.IsSuccess)
+                    return BadRequest(new { message = result.Message });
+
+                return Ok(new
+                {
+                    message = result.Message,
+                    productId = product.Id
+                });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    message = "خطای داخلی سرور",
+                    error = ex.Message
+                });
+            }
         }
-        [HttpGet("button-products")]
-        public async Task<IActionResult> GetButtonProducts()
+
+        // DELETE: api/Product/5
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(int id)
         {
-            var result = await _ProductService.SearchbyButtonProducts();
+            try
+            {
+                var userId = _currentUser.UserId ?? throw new UnauthorizedAccessException("کاربر شناسایی نشد.");
+                var result = await _productService.Delete(id, userId);
 
-            if (result == null || result.Count == 0)
-                return NotFound("هیچ محصول فعالی یافت نشد.");
+                if (!result.IsSuccess)
+                {
+                    if (result.Message.Contains("یافت نشد"))
+                        return NotFound(new { message = result.Message });
 
-            return Ok(result);
+                    return BadRequest(new { message = result.Message });
+                }
+
+                return Ok(new
+                {
+                    message = result.Message,
+                    productId = id
+                });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    message = "خطای داخلی سرور",
+                    error = ex.Message
+                });
+            }
         }
     }
 }

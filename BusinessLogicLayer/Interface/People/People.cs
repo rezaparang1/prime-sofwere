@@ -1,4 +1,6 @@
-﻿using BusinessEntity.People;
+﻿using BusinessEntity.DTO.People;
+using BusinessEntity.People;
+using DataAccessLayer;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,12 +12,16 @@ namespace BusinessLogicLayer.Interface.People
     public interface IPeopleService
     {
         Task<List<PeopleComboDto>> GetPeopleForComboAsync();
-        Task<List<BusinessEntity.People.People>> Search(string? FirstName = null, string? LastName = null, string? PeoplId = null, string? Phone = null, string? Address = null, int? GropPeople = null, bool? Business = null, bool? User = null, bool? Employee = null, bool? Investor = null);
+        Task<List<BusinessEntity.People.People>> Search(string? firstName = null,
+            string? lastName = null, string? phone = null, string? address = null,
+            int? groupPeople = null, bool? business = null, bool? user = null,
+            bool? employee = null, bool? investor = null);
+
         Task<IEnumerable<BusinessEntity.People.People>> GetAll();
         Task<BusinessEntity.People.People?> GetById(int id);
-        Task<BusinessEntity.People.People?> GetPeolpeById(string? IdPeople);
-        Task<string> Create(int UserId ,BusinessEntity.People.People People);
-        Task<string> Update(int UserId ,BusinessEntity.People.People People);
-        Task<string> Delete(int UserId ,int id);
+        Task<BusinessEntity.People.People?> GetPeopleById(string? idPeople);
+        Task<Result> Create(BusinessEntity.People.People person, int userId);
+        Task<Result> Update(BusinessEntity.People.People person, int userId);
+        Task<Result> Delete(int id, int userId);
     }
 }

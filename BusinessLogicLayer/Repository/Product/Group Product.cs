@@ -1,101 +1,84 @@
-﻿using FluentValidation;
-using BusinessLogicLayer.Interface.Producr;
-using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.IO.Pipelines;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using BusinessLogicLayer.Interface;
+using DataAccessLayer;
+using DataAccessLayer.Interface;
+using BusinessEntity.Product;
 
 namespace BusinessLogicLayer.Repository.Product
 {
     public class GroupProductService : Interface.Producr.IGroupProductService
     {
-        private readonly DataAccessLayer.Interface.Product.IGroupProductRepository _GroupProductRepository;
-        private readonly ILogger<GroupProductService> _logger;
+        private readonly IGenericRepository<Group_Product> _groupoductRepo;
+        private readonly IGenericRepository<BusinessEntity.Product.Product> _productRepo;
+        private readonly IGenericService<Group_Product> _genericService;
 
-        public GroupProductService(DataAccessLayer.Interface.Product.IGroupProductRepository GroupProductRepository, ILogger<GroupProductService> logger)
+        public GroupProductService(
+            IGenericRepository<Group_Product> groupproductRepo,
+            IGenericRepository<BusinessEntity.Product.Product> productRepo,
+            IGenericService<Group_Product> genericService)
         {
-            _GroupProductRepository = GroupProductRepository;
-            _logger = logger;
+            _groupoductRepo = groupproductRepo;
+            _productRepo = productRepo;
+            _genericService = genericService;
         }
-        //*******READ*********
-        public async Task<IEnumerable<BusinessEntity.Product.Group_Product>> GetAll()
+
+        public async Task<IEnumerable<Group_Product>> GetAll()
         {
-            _logger.LogInformation("Request to receive all Group_Product");
-            var result = await _GroupProductRepository.GetAll();
-            _logger.LogInformation("{Count} items received", result.Count());
-            return result;
+            return await _groupoductRepo.GetAllAsync();
         }
-        public async Task<BusinessEntity.Product.Group_Product?> GetById(int id)
-        {
-            _logger.LogInformation("Request to receive Group_Product with ID: {Id}", id);
-            var entity = await _GroupProductRepository.GetById(id);
-            if (entity == null)
-                _logger.LogWarning("Group_Product with ID {Id} not found", id);
-            else
-                _logger.LogInformation("Group_Product with ID {Id} was successfully found", id);
 
-            return entity;
+        public async Task<Group_Product?> GetById(int id)
+        {
+            return await _groupoductRepo.GetByIdAsync(id);
         }
-        //*****CRUD**********
-        public async Task<ServiceResult> Create(int UserId, BusinessEntity.Product.Group_Product Group_Product)
+
+        public async Task<Result> Create(Group_Product async, int UserId)
         {
-            _logger.LogInformation("Request to add new Group_Product: {@Group_Product}", Group_Product);
+            if (string.IsNullOrWhiteSpace(async.Name))
+                return Result.Failure("نام گروه کالا نمی‌تواند خالی باشد.");
 
-            var validator = new ValidatData.Product.GroupProductValidator();
-            var result = validator.Validate(Group_Product);
+            var exists = await _groupoductRepo.FindAsync(b => b.Name == async.Name);
+            if (exists.Any())
+                return Result.Failure("این نام قبلاً ثبت شده است.");
 
-            if (!result.IsValid)
-            {
-                var errors = string.Join(" | ", result.Errors.Select(e => e.ErrorMessage));
-                _logger.LogWarning("Error validating Group_Product: {Errors}", errors);
-                throw new ValidationException("خطا در اعتبارسنجی : " + errors);
-            }
-
-            var repoResult = await _GroupProductRepository.Create(UserId, Group_Product);
-
-            var result1 = new ServiceResult(repoResult.Success, repoResult.Message);
-
-            _logger.LogInformation("Add result: {@Result}", result1);
-            return result1;
+            string log = $"ثبت گروه کالا با نام {async.Name}";
+            return await _genericService.AddWithLogAsync(async, log, UserId);
         }
-        public async Task<ServiceResult> Update(int UserId, BusinessEntity.Product.Group_Product Group_Product)
+
+        public async Task<Result> Update(Group_Product async, int UserId)
         {
-            _logger.LogInformation("Request to update Group_Product: {@Group_Product}", Group_Product);
+            if (string.IsNullOrWhiteSpace(async.Name))
+                return Result.Failure("نام گروه کالا نمی‌تواند خالی باشد.");
 
-            var validator = new ValidatData.Product.GroupProductValidator();
-            var result = validator.Validate(Group_Product);
-
-            if (!result.IsValid)
-            {
-                var errors = string.Join(" | ", result.Errors.Select(e => e.ErrorMessage));
-                _logger.LogWarning("Error validating Group_Product: {Errors}", errors);
-                throw new ValidationException("خطا در اعتبارسنجی : " + errors);
-            }
-
-            var existing = await _GroupProductRepository.GetById(Group_Product.Id);
+            var existing = await _groupoductRepo.GetByIdAsync(async.Id);
             if (existing == null)
-            {
-                _logger.LogWarning("Group_Product with ID: {Id} not found for update.", Group_Product.Id);
-                throw new KeyNotFoundException(" درخواست مورد نظر یافت نشد.");
-            }
+                return Result.Failure("گروه کالا یافت نشد.");
 
-            var repoResult = await _GroupProductRepository.Update(UserId, Group_Product);
-            var result1 = new ServiceResult(repoResult.Success, repoResult.Message);
+            var duplicate = (await _groupoductRepo
+                .FindAsync(b => b.Name == async.Name && b.Id != async.Id))
+                .Any();
 
-            _logger.LogInformation("Add result: {@Result}", result1);
-            return result1;
+            if (duplicate)
+                return Result.Failure("این نام قبلاً ثبت شده است.");
+
+            string log = $"ویرایش گروه کالا از '{existing.Name}' به '{async.Name}'";
+            return await _genericService.UpdateWithLogAsync(async, log, UserId);
         }
-        public async Task<ServiceResult> Delete(int UserId, int id)
-        {
-            _logger.LogInformation("Request to delete Group_Product with ID: {Id}", id);
-            var repoResult = await _GroupProductRepository.Delete(UserId,id);
-            var result1 = new ServiceResult(repoResult.Success, repoResult.Message);
 
-            _logger.LogInformation("Add result: {@Result}", result1);
-            return result1;
+        public async Task<Result> Delete(int Id, int UserId)
+        {
+            var bank = await _groupoductRepo.GetByIdAsync(Id);
+            if (bank == null)
+                return Result.Failure("گروه کالا یافت نشد.");
+
+            var hasAccount = (await _productRepo
+                .FindAsync(a => a.Id == Id))
+                .Any();
+
+            if (hasAccount)
+                return Result.Failure("این گروه کالا دارای کالای فعال است و قابل حذف نیست.");
+
+            string log = $"حذف گروه کالا با نام {bank.Name}";
+            return await _genericService.DeleteWithLogAsync(bank, log, UserId);
         }
     }
 }

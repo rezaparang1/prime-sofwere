@@ -1,100 +1,147 @@
-﻿using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using FluentValidation;
+﻿using BusinessLogicLayer.Interface;
+using BusinessLogicLayer.Interface.Producr;
+using DataAccessLayer.Interface.Product;
+using Microsoft.Extensions.Logging;
+using BusinessEntity.Product;
+using DataAccessLayer;
 
 namespace BusinessLogicLayer.Repository.Product
 {
-    public class StoreroomProductService : Interface.Producr.IStoreroomProductService
+    public class StoreroomProductService : IStoreroomProductService
     {
-        private readonly DataAccessLayer.Interface.Product.IStoreroomProductRepository _StoreroomProductRepository;
+        private readonly IStoreroomProductRepository _storeroomRepository;
+        private readonly ILogService _logService;
+        private readonly Database _context;
         private readonly ILogger<StoreroomProductService> _logger;
 
-        public StoreroomProductService(DataAccessLayer.Interface.Product.IStoreroomProductRepository StoreroomProductRepository, ILogger<StoreroomProductService> logger)
+        public StoreroomProductService(
+            IStoreroomProductRepository storeroomRepository,
+            ILogService logService,
+            Database context,
+            ILogger<StoreroomProductService> logger)
         {
-            _StoreroomProductRepository = StoreroomProductRepository;
+            _storeroomRepository = storeroomRepository;
+            _logService = logService;
+            _context = context;
             _logger = logger;
         }
-        //*******SEARCH*******
-        public async Task<List<BusinessEntity.Product.StoreroomProductDto>> Search(string? Name = null, string? Description = null, int? IdSection = null)
-        {
-            _logger.LogInformation("Request BankT search with name filter: {Name}{Description}{IdSection}", Name,Description, IdSection);
-            var result = await _StoreroomProductRepository.Search(Name,Description,IdSection);
-            _logger.LogInformation("{Count} results found", result.Count);
-            return result;
-        }
-        //*******READ*********
-        public async Task<IEnumerable<BusinessEntity.Product.StoreroomProductDto>> GetAll()
-        {
-            _logger.LogInformation("Request to receive all Storeroom_Product");
-            var result = await _StoreroomProductRepository.GetAll();
-            _logger.LogInformation("{Count} items received", result.Count());
-            return result;
-        }
-        public async Task<BusinessEntity.Product.StoreroomProductDto?> GetById(int id)
-        {
-            _logger.LogInformation("Request to receive Storeroom_Product with ID: {Id}", id);
-            var entity = await _StoreroomProductRepository.GetById(id);
-            if (entity == null)
-                _logger.LogWarning("Storeroom_Product with ID {Id} not found", id);
-            else
-                _logger.LogInformation("Storeroom_Product with ID {Id} was successfully found", id);
 
-            return entity;
-        }
-        //*****CRUD**********
-        public async Task<string> Create(int UserId, BusinessEntity.Product.Storeroom_Product Storeroom_Product)
+        public async Task<IEnumerable<Storeroom_Product>> GetAll()
         {
-            _logger.LogInformation("Request to add new Storeroom_Product: {@Storeroom_Product}", Storeroom_Product);
+            return await _storeroomRepository.GetAll();
+        }
 
-            var validator = new ValidatData.Product.StoreroomProductValidator();
-            var result = validator.Validate(Storeroom_Product);
+        public async Task<Storeroom_Product?> GetById(int id)
+        {
+            return await _storeroomRepository.GetById(id);
+        }
 
-            if (!result.IsValid)
+        public async Task<List<Storeroom_Product>> Search(
+            string? name = null,
+            int? sectionProductId = null,
+            int? peopleId = null)
+        {
+            return await _storeroomRepository.Search(name, sectionProductId, peopleId);
+        }
+
+        public async Task<Result> Create(Storeroom_Product storeroom, int userId)
+        {
+            using var transaction = await _context.Database.BeginTransactionAsync();
+
+            try
             {
-                var errors = string.Join(" | ", result.Errors.Select(e => e.ErrorMessage));
-                _logger.LogWarning("Error validating Storeroom_Product: {Errors}", errors);
-                throw new ValidationException("خطا در اعتبارسنجی : " + errors);
+                // اعتبارسنجی
+                if (string.IsNullOrWhiteSpace(storeroom.Name))
+                    return Result.Failure("نام انبار الزامی است.");
+
+                if (storeroom.SectionProductId <= 0)
+                    return Result.Failure("بخش محصول باید انتخاب شود.");
+
+                if (storeroom.PeopleId <= 0)
+                    return Result.Failure("مسئول انبار باید انتخاب شود.");
+
+                // ایجاد انبار
+                var result = await _storeroomRepository.Create(storeroom);
+                if (!result.IsSuccess)
+                    return result;
+
+                // ثبت لاگ
+                await _logService.CreateLogAsync(
+                    $"ایجاد انبار جدید: {storeroom.Name} (شناسه: {storeroom.Id})",
+                    userId);
+
+                await transaction.CommitAsync();
+                return Result.Success("انبار با موفقیت ایجاد شد.");
             }
-
-            var message = await _StoreroomProductRepository.Create(UserId, Storeroom_Product);
-            _logger.LogInformation("Add result: {Message}", message);
-            return message;
-        }
-        public async Task<string> Update(int UserId, BusinessEntity.Product.Storeroom_Product Storeroom_Product)
-        {
-            _logger.LogInformation("Request to update Storeroom_Product: {@Storeroom_Product}", Storeroom_Product);
-
-            var validator = new ValidatData.Product.StoreroomProductValidator();
-            var result = validator.Validate(Storeroom_Product);
-
-            if (!result.IsValid)
+            catch (Exception ex)
             {
-                var errors = string.Join(" | ", result.Errors.Select(e => e.ErrorMessage));
-                _logger.LogWarning("Error validating Storeroom_Product: {Errors}", errors);
-                throw new ValidationException("خطا در اعتبارسنجی : " + errors);
+                await transaction.RollbackAsync();
+                _logger.LogError(ex, "خطا در ایجاد انبار: {@Storeroom}", storeroom);
+                return Result.Failure($"خطا در ایجاد انبار: {ex.Message}");
             }
-
-            var existing = await _StoreroomProductRepository.GetById(Storeroom_Product.Id);
-            if (existing == null)
-            {
-                _logger.LogWarning("Storeroom_Product with ID: {Id} not found for update.", Storeroom_Product.Id);
-                throw new KeyNotFoundException(" بانک مورد نظر یافت نشد.");
-            }
-
-            var message = await _StoreroomProductRepository.Update(UserId, Storeroom_Product);
-            _logger.LogInformation("Update result: {Message}", message);
-            return message;
         }
-        public async Task<string> Delete(int UserId, int id)
+
+        public async Task<Result> Update(Storeroom_Product storeroom, int userId)
         {
-            _logger.LogInformation("Request to delete Storeroom_Product with ID: {Id}", id);
-            var message = await _StoreroomProductRepository.Delete(id, UserId);
-            _logger.LogInformation("Delete result: {Message}", message);
-            return message;
+            using var transaction = await _context.Database.BeginTransactionAsync();
+
+            try
+            {
+                // اعتبارسنجی
+                if (string.IsNullOrWhiteSpace(storeroom.Name))
+                    return Result.Failure("نام انبار الزامی است.");
+
+                // به‌روزرسانی انبار
+                var result = await _storeroomRepository.Update(storeroom);
+                if (!result.IsSuccess)
+                    return result;
+
+                // ثبت لاگ
+                await _logService.CreateLogAsync(
+                    $"به‌روزرسانی انبار: {storeroom.Name} (شناسه: {storeroom.Id})",
+                    userId);
+
+                await transaction.CommitAsync();
+                return Result.Success("انبار با موفقیت به‌روزرسانی شد.");
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                _logger.LogError(ex, "خطا در به‌روزرسانی انبار: {@Storeroom}", storeroom);
+                return Result.Failure($"خطا در به‌روزرسانی انبار: {ex.Message}");
+            }
+        }
+
+        public async Task<Result> Delete(int id, int userId)
+        {
+            using var transaction = await _context.Database.BeginTransactionAsync();
+
+            try
+            {
+                // دریافت اطلاعات انبار برای لاگ
+                var storeroom = await _storeroomRepository.GetById(id);
+                if (storeroom == null)
+                    return Result.Failure("انبار یافت نشد.");
+
+                // حذف انبار
+                var result = await _storeroomRepository.Delete(id);
+                if (!result.IsSuccess)
+                    return result;
+
+                // ثبت لاگ
+                await _logService.CreateLogAsync(
+                    $"حذف انبار: {storeroom.Name} (شناسه: {id})",
+                    userId);
+
+                await transaction.CommitAsync();
+                return Result.Success("انبار با موفقیت حذف شد.");
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                _logger.LogError(ex, "خطا در حذف انبار با شناسه: {Id}", id);
+                return Result.Failure($"خطا در حذف انبار: {ex.Message}");
+            }
         }
     }
 }

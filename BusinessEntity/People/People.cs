@@ -1,4 +1,4 @@
-﻿using BusinessEntity.Bank;
+﻿using BusinessEntity.Fund;
 using BusinessEntity.Settings;
 using System;
 using System.Collections.Generic;
@@ -16,8 +16,10 @@ namespace BusinessEntity.People
     {
         public int Id { get; set; }
         public string IdPeople { get; set; } = string.Empty;
+
         public int TypePeopleId { get; set; }
         public Type_People? Type_People { get; set; } = null!;
+
         [MaxLength(50)]
         public string FirstName { get; set; } = String.Empty;
         [MaxLength(50)]
@@ -39,14 +41,18 @@ namespace BusinessEntity.People
         public string Address { get; set; } = string.Empty;
         public bool TaxFree { get; set; }
         public int InitialCapital { get; set; }
-        public long Inventory { get; set; }    
-        public int GroupPeopleId { get; set; }
+        public long Inventory { get; set; }
         public bool IsDelete { get; set; }
+
+        public int GroupPeopleId { get; set; }
         public Group_People? Group_People { get; set; } = null!;   
+
         public int PriceLevelID { get; set; }
         public Product.PriceLevels? PriceLevel { get; set; } = null!;
+
         public int AccountId { get; set; }
-        public Financial_Operations.Account? Account { get; set; } = null!;
+        public Invoices.Account? Account { get; set; } = null!;
+
         public ICollection<User> Users { get; set; } = new List<User>();
         public ICollection<Product.Storeroom_Product> Storeroom_Product { get; set; } = new List<Product.Storeroom_Product>();
         public ICollection<BusinessEntity.Invoices.Invoices> Invoices { get; set; } = new List<BusinessEntity.Invoices.Invoices>();

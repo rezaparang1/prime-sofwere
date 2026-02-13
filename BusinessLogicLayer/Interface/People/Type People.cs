@@ -1,17 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using DataAccessLayer;
+using BusinessEntity.People;
 
 namespace BusinessLogicLayer.Interface.People
 {
     public interface ITypePeopleService
     {
-        Task<IEnumerable<BusinessEntity.People.Type_People>> GetAll();
-        Task<BusinessEntity.People.Type_People?> GetById(int id);
-        Task<string> Create(int UserId , BusinessEntity.People.Type_People Type_People);
-        Task<string> Update(int UserId, BusinessEntity.People.Type_People Type_People);
-        Task<string> Delete(int UserId, int id);
+        Task<IEnumerable<Type_People>> GetAll();
+        Task<Type_People?> GetById(int id);
+        Task<Result> Create(Type_People Type_People, int UserId);
+        Task<Result> Update(Type_People Type_People, int UserId);
+        Task<Result> Delete(int Id, int UserId);
     }
 }

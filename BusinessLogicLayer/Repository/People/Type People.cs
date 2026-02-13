@@ -1,93 +1,85 @@
 ﻿using BusinessEntity.People;
-using FluentValidation;
-using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using BusinessLogicLayer.Interface;
+using DataAccessLayer;
+using DataAccessLayer.Interface;
+
 
 namespace BusinessLogicLayer.Repository.People
 {
-    public class TypePeopleService : Interface.People.ITypePeopleService
+    public class TypePeopelService : Interface.People.ITypePeopleService
     {
-        private readonly DataAccessLayer.Interface.People.ITypePeopleRepository _TypePeopleRepository;
-        private readonly ILogger<TypePeopleService> _logger;
+        private readonly IGenericRepository<Type_People> _typepeopleRepo;
+        private readonly IGenericRepository<BusinessEntity.People.People> _peopleRepo;
+        private readonly IGenericService<Type_People> _genericService;
 
-        public TypePeopleService(DataAccessLayer.Interface.People.ITypePeopleRepository TypePeopleRepository, ILogger<TypePeopleService> logger)
+        public TypePeopelService(
+            IGenericRepository<Type_People> typepeopleRepo,
+            IGenericRepository<BusinessEntity.People.People> peopelRepo,
+            IGenericService<Type_People> genericService)
         {
-            _TypePeopleRepository = TypePeopleRepository;
-            _logger = logger;
+            _typepeopleRepo = typepeopleRepo;
+            _peopleRepo = peopelRepo;
+            _genericService = genericService;
         }
-        //*******READ*********
-        public async Task<IEnumerable<BusinessEntity.People.Type_People>> GetAll()
+
+        public async Task<IEnumerable<Type_People>> GetAll()
         {
-            _logger.LogInformation("Request to receive all Type_People");
-            var result = await _TypePeopleRepository.GetAll();
-            _logger.LogInformation("{Count} items received", result.Count());
-            return result;
+            return await _typepeopleRepo.GetAllAsync();
         }
-        public async Task<BusinessEntity.People.Type_People?> GetById(int id)
-        {
-            _logger.LogInformation("Request to receive Type_People with ID: {Id}", id);
-            var entity = await _TypePeopleRepository.GetById(id);
-            if (entity == null)
-                _logger.LogWarning("Type_People with ID {Id} not found", id);
-            else
-                _logger.LogInformation("Type_People with ID {Id} was successfully found", id);
 
-            return entity;
+        public async Task<Type_People?> GetById(int id)
+        {
+            return await _typepeopleRepo.GetByIdAsync(id);
         }
-        //*****CRUD**********
-        public async Task<string> Create(int UserId, BusinessEntity.People.Type_People Type_People)
+
+        public async Task<Result> Create(Type_People async, int userId)
         {
-            _logger.LogInformation("Request to add new Type_People: {@Type_People}", Type_People);
+            if (string.IsNullOrWhiteSpace(async.Name))
+                return Result.Failure("نام نوع شخص نمی‌تواند خالی باشد.");
 
-            var validator = new ValidatData.People.TypePeopleValidator();
-            var result = validator.Validate(Type_People);
+            var exists = await _typepeopleRepo.FindAsync(b => b.Name == async.Name);
+            if (exists.Any())
+                return Result.Failure("این نام قبلاً ثبت شده است.");
 
-            if (!result.IsValid)
-            {
-                var errors = string.Join(" | ", result.Errors.Select(e => e.ErrorMessage));
-                _logger.LogWarning("Error validating Type_People: {Errors}", errors);
-                throw new ValidationException("خطا در اعتبارسنجی : " + errors);
-            }
-
-            var message = await _TypePeopleRepository.Create(UserId, Type_People);
-            _logger.LogInformation("Add result: {Message}", message);
-            return message;
+            string log = $"ثبت نوع شخص با نام {async.Name}";
+            return await _genericService.AddWithLogAsync(async, log, userId);
         }
-        public async Task<string> Update(int UserId, BusinessEntity.People.Type_People Type_People)
+
+        public async Task<Result> Update(Type_People async, int userId)
         {
-            _logger.LogInformation("Request to update Type_People: {@Type_People}", Type_People);
+            if (string.IsNullOrWhiteSpace(async.Name))
+                return Result.Failure("نام نوع شخص نمی‌تواند خالی باشد.");
 
-            var validator = new ValidatData.People.TypePeopleValidator();
-            var result = validator.Validate(Type_People);
-
-            if (!result.IsValid)
-            {
-                var errors = string.Join(" | ", result.Errors.Select(e => e.ErrorMessage));
-                _logger.LogWarning("Error validating Type_People: {Errors}", errors);
-                throw new ValidationException("خطا در اعتبارسنجی : " + errors);
-            }
-
-            var existing = await _TypePeopleRepository.GetById(Type_People.Id);
+            var existing = await _typepeopleRepo.GetByIdAsync(async.Id);
             if (existing == null)
-            {
-                _logger.LogWarning("Type_People with ID: {Id} not found for update.", Type_People.Id);
-                throw new KeyNotFoundException(" درخواست مورد نظر یافت نشد.");
-            }
+                return Result.Failure("نوع شخص یافت نشد.");
 
-            var message = await _TypePeopleRepository.Update(UserId, Type_People);
-            _logger.LogInformation("Update result: {Message}", message);
-            return message;
+            var duplicate = (await _typepeopleRepo
+                .FindAsync(b => b.Name == async.Name && b.Id != async.Id))
+                .Any();
+
+            if (duplicate)
+                return Result.Failure("این نام قبلاً ثبت شده است.");
+
+            string log = $"ویرایش نوع شخص از '{existing.Name}' به '{async.Name}'";
+            return await _genericService.UpdateWithLogAsync(async, log, userId);
         }
-        public async Task<string> Delete(int UserId, int id)
+
+        public async Task<Result> Delete(int bankId, int userId)
         {
-            _logger.LogInformation("Request to delete Type_People with ID: {Id}", id);
-            var message = await _TypePeopleRepository.Delete(UserId,id);
-            _logger.LogInformation("Delete result: {Message}", message);
-            return message;
+            var bank = await _typepeopleRepo.GetByIdAsync(bankId);
+            if (bank == null)
+                return Result.Failure("نوع شخص یافت نشد.");
+
+            var hasAccount = (await _peopleRepo
+                .FindAsync(a => a.Id == bankId))
+                .Any();
+
+            if (hasAccount)
+                return Result.Failure("این نوع شخص دارای شخص فعال است و قابل حذف نیست.");
+
+            string log = $"حذف نوع شخص با نام {bank.Name}";
+            return await _genericService.DeleteWithLogAsync(bank, log, userId);
         }
     }
 }

@@ -1,92 +1,84 @@
-﻿using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using FluentValidation;
+﻿using BusinessEntity.Product;
+using BusinessLogicLayer.Interface;
+using DataAccessLayer;
+using DataAccessLayer.Interface;
 
 namespace BusinessLogicLayer.Repository.Product
 {
-    public class PriceLevelsService : Interface.Producr.IPriceLevelsService
+    public class PricelevelService : Interface.Producr.IPriceLevelsService
     {
-        private readonly DataAccessLayer.Interface.Product.IPriceLevelsRepository _PriceLevelsRepository;
-        private readonly ILogger<PriceLevelsService> _logger;
+        private readonly IGenericRepository<PriceLevels> _pricelevelRepo;
+        private readonly IGenericRepository<BusinessEntity.People.People> _peopelRepo;
+        private readonly IGenericService<PriceLevels> _genericService;
 
-        public PriceLevelsService(DataAccessLayer.Interface.Product.IPriceLevelsRepository PriceLevelsRepository, ILogger<PriceLevelsService> logger)
+        public PricelevelService(
+            IGenericRepository<PriceLevels> pricelevelRepo,
+            IGenericRepository<BusinessEntity.People.People> peopleRepo,
+            IGenericService<PriceLevels> genericService)
         {
-            _PriceLevelsRepository = PriceLevelsRepository;
-            _logger = logger;
+            _pricelevelRepo = pricelevelRepo;
+            _peopelRepo = peopleRepo;
+            _genericService = genericService;
         }
-        //*******READ*********
-        public async Task<IEnumerable<BusinessEntity.Product.PriceLevels>> GetAll()
+
+        public async Task<IEnumerable<PriceLevels>> GetAll()
         {
-            _logger.LogInformation("Request to receive all PriceLevels");
-            var result = await _PriceLevelsRepository.GetAll();
-            _logger.LogInformation("{Count} items received", result.Count());
-            return result;
+            return await _pricelevelRepo.GetAllAsync();
         }
-        public async Task<BusinessEntity.Product.PriceLevels?> GetById(int id)
-        {
-            _logger.LogInformation("Request to receive PriceLevels with ID: {Id}", id);
-            var entity = await _PriceLevelsRepository.GetById(id);
-            if (entity == null)
-                _logger.LogWarning("PriceLevels with ID {Id} not found", id);
-            else
-                _logger.LogInformation("PriceLevels with ID {Id} was successfully found", id);
 
-            return entity;
+        public async Task<PriceLevels?> GetById(int id)
+        {
+            return await _pricelevelRepo.GetByIdAsync(id);
         }
-        //*****CRUD**********
-        public async Task<string> Create(int UserId, BusinessEntity.Product.PriceLevels PriceLevels)
+
+        public async Task<Result> Create(PriceLevels async, int userId)
         {
-            _logger.LogInformation("Request to add new PriceLevels: {@PriceLevels}", PriceLevels);
+            if (string.IsNullOrWhiteSpace(async.Name))
+                return Result.Failure("نام سطح قیمت نمی‌تواند خالی باشد.");
 
-            var validator = new ValidatData.Product.PriceLevelsValidator();
-            var result = validator.Validate(PriceLevels);
+            var exists = await _pricelevelRepo.FindAsync(b => b.Name == async.Name);
+            if (exists.Any())
+                return Result.Failure("این نام قبلاً ثبت شده است.");
 
-            if (!result.IsValid)
-            {
-                var errors = string.Join(" | ", result.Errors.Select(e => e.ErrorMessage));
-                _logger.LogWarning("Error validating PriceLevels: {Errors}", errors);
-                throw new ValidationException("خطا در اعتبارسنجی : " + errors);
-            }
-
-            var message = await _PriceLevelsRepository.Create(UserId, PriceLevels);
-            _logger.LogInformation("Add result: {Message}", message);
-            return message;
+            string log = $"ثبت  سطح قیمت با نام {async.Name}";
+            return await _genericService.AddWithLogAsync(async, log, userId);
         }
-        public async Task<string> Update(int UserId, BusinessEntity.Product.PriceLevels PriceLevels)
+
+        public async Task<Result> Update(PriceLevels async, int userId)
         {
-            _logger.LogInformation("Request to update PriceLevels: {@PriceLevels}", PriceLevels);
+            if (string.IsNullOrWhiteSpace(async.Name))
+                return Result.Failure("نام سطح قیمت نمی‌تواند خالی باشد.");
 
-            var validator = new ValidatData.Product.PriceLevelsValidator();
-            var result = validator.Validate(PriceLevels);
-
-            if (!result.IsValid)
-            {
-                var errors = string.Join(" | ", result.Errors.Select(e => e.ErrorMessage));
-                _logger.LogWarning("Error validating PriceLevels: {Errors}", errors);
-                throw new ValidationException("خطا در اعتبارسنجی : " + errors);
-            }
-
-            var existing = await _PriceLevelsRepository.GetById(PriceLevels.Id);
+            var existing = await _pricelevelRepo.GetByIdAsync(async.Id);
             if (existing == null)
-            {
-                _logger.LogWarning("PriceLevels with ID: {Id} not found for update.", PriceLevels.Id);
-                throw new KeyNotFoundException(" درخواست مورد نظر یافت نشد.");
-            }
+                return Result.Failure(" سطح قیمت یافت نشد.");
 
-            var message = await _PriceLevelsRepository.Update(UserId, PriceLevels);
-            _logger.LogInformation("Update result: {Message}", message);
-            return message;
+            var duplicate = (await _pricelevelRepo
+                .FindAsync(b => b.Name == async.Name && b.Id != async.Id))
+                .Any();
+
+            if (duplicate)
+                return Result.Failure("این نام قبلاً ثبت شده است.");
+
+            string log = $"ویرایش سطح قیمت از '{existing.Name}' به '{async.Name}'";
+            return await _genericService.UpdateWithLogAsync(async, log, userId);
         }
-        public async Task<string> Delete(int UserId, int id)
+
+        public async Task<Result> Delete(int bankId, int userId)
         {
-            _logger.LogInformation("Request to delete PriceLevels with ID: {Id}", id);
-            var message = await _PriceLevelsRepository.Delete(UserId,id);
-            _logger.LogInformation("Delete result: {Message}", message);
-            return message;
+            var bank = await _pricelevelRepo.GetByIdAsync(bankId);
+            if (bank == null)
+                return Result.Failure(" سطح قیمت یافت نشد.");
+
+            var hasAccount = (await _peopelRepo
+                .FindAsync(a => a.Id == bankId))
+                .Any();
+
+            if (hasAccount)
+                return Result.Failure("این سطح قیمت دارای شخص فعال است و قابل حذف نیست.");
+
+            string log = $"حذف  سطح قیمت با نام {bank.Name}";
+            return await _genericService.DeleteWithLogAsync(bank, log, userId);
         }
     }
 }

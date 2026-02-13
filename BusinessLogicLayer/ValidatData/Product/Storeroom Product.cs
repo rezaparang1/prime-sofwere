@@ -14,17 +14,17 @@ namespace BusinessLogicLayer.ValidatData.Product
         {
             RuleFor(p => p.Name)
                 .NotEmpty().WithMessage("نام صندوق نمیتواند خالی باشد مجددا تلاش کنید .")
-                .Must(name => !string.IsNullOrWhiteSpace(name)).WithMessage("نام نباید فقط فاصله باشد.")
+              //  .Must(name => !string.IsNullOrWhiteSpace(name)).WithMessage("نام نباید فقط فاصله باشد.")
                 .MaximumLength(50).WithMessage("نام  صندوق نباید بیش از 50 کاراکتر باشد.");
             RuleFor(p => p.PeopleId)
                .NotEmpty().WithMessage("نام انباردار نمیتواند خالی باشد مجددا تلاش کنید .");
             RuleFor(p => p.SectionProductId)
               .NotEmpty().WithMessage("نام بخش نمیتواند خالی باشد مجددا تلاش کنید .");
             RuleFor(p => p.Description)
-                .Must(name => !string.IsNullOrWhiteSpace(name)).WithMessage("نام نباید فقط فاصله باشد.")
+              //  .Must(description => !string.IsNullOrWhiteSpace(description)).WithMessage("نام نباید فقط فاصله باشد.")
                 .MaximumLength(200).WithMessage(" توضیحات نباید بیش از 200 کاراکتر باشد.");
             RuleFor(p => p.Address)
-               .Must(name => !string.IsNullOrWhiteSpace(name)).WithMessage("نام نباید فقط فاصله باشد.")
+               //.Must(address => !string.IsNullOrWhiteSpace(address)).WithMessage("نام نباید فقط فاصله باشد.")
                .MaximumLength(200).WithMessage(" آدرس نباید بیش از 200 کاراکتر باشد.");
         }
     }

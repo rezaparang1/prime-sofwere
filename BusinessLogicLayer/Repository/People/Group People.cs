@@ -1,92 +1,84 @@
-﻿using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using FluentValidation;
+﻿using BusinessLogicLayer.Interface;
+using DataAccessLayer;
+using DataAccessLayer.Interface;
+using BusinessEntity.People;
 
 namespace BusinessLogicLayer.Repository.People
 {
-    public class GroupPeopleService : Interface.People.IGroupPeopleService
+    public class GroupPeopelService : Interface.People.IGroupPeopleService
     {
-        private readonly DataAccessLayer.Interface.People.IGroupPeopleRepository _GroupPeopleRepository;
-        private readonly ILogger<GroupPeopleService> _logger;
+        private readonly IGenericRepository<Group_People> _grouppeopleRepo;
+        private readonly IGenericRepository<BusinessEntity.People.People> _peopleRepo;
+        private readonly IGenericService<Group_People> _genericService;
 
-        public GroupPeopleService(DataAccessLayer.Interface.People.IGroupPeopleRepository GroupPeopleRepository, ILogger<GroupPeopleService> logger)
+        public GroupPeopelService(
+            IGenericRepository<Group_People> grouppeopleRepo,
+            IGenericRepository<BusinessEntity.People.People> peopeleRepo,
+            IGenericService<Group_People> genericService)
         {
-            _GroupPeopleRepository = GroupPeopleRepository;
-            _logger = logger;
+            _grouppeopleRepo = grouppeopleRepo;
+            _peopleRepo = peopeleRepo;
+            _genericService = genericService;
         }
-        //*******READ*********
-        public async Task<IEnumerable<BusinessEntity.People.Group_People>> GetAll()
+
+        public async Task<IEnumerable<Group_People>> GetAll()
         {
-            _logger.LogInformation("Request to receive all Group_People");
-            var result = await _GroupPeopleRepository.GetAll();
-            _logger.LogInformation("{Count} items received", result.Count());
-            return result;
+            return await _grouppeopleRepo.GetAllAsync();
         }
-        public async Task<BusinessEntity.People.Group_People?> GetById(int id)
-        {
-            _logger.LogInformation("Request to receive Group_People with ID: {Id}", id);
-            var entity = await _GroupPeopleRepository.GetById(id);
-            if (entity == null)
-                _logger.LogWarning("Group_People with ID {Id} not found", id);
-            else
-                _logger.LogInformation("Group_People with ID {Id} was successfully found", id);
 
-            return entity;
+        public async Task<Group_People?> GetById(int id)
+        {
+            return await _grouppeopleRepo.GetByIdAsync(id);
         }
-        //*****CRUD**********
-        public async Task<string> Create(int UserId, BusinessEntity.People.Group_People Group_People)
+
+        public async Task<Result> Create(Group_People async, int userId)
         {
-            _logger.LogInformation("Request to add new Group_People: {@Group_People}", Group_People);
+            if (string.IsNullOrWhiteSpace(async.Name))
+                return Result.Failure("نام گروه شخص نمی‌تواند خالی باشد.");
 
-            var validator = new ValidatData.People.GroupPeopleValidator();
-            var result = validator.Validate(Group_People);
+            var exists = await _grouppeopleRepo.FindAsync(b => b.Name == async.Name);
+            if (exists.Any())
+                return Result.Failure("این نام قبلاً ثبت شده است.");
 
-            if (!result.IsValid)
-            {
-                var errors = string.Join(" | ", result.Errors.Select(e => e.ErrorMessage));
-                _logger.LogWarning("Error validating Group_People: {Errors}", errors);
-                throw new ValidationException("خطا در اعتبارسنجی : " + errors);
-            }
-
-            var message = await _GroupPeopleRepository.Create(UserId, Group_People);
-            _logger.LogInformation("Add result: {Message}", message);
-            return message;
+            string log = $"ثبت گروه شخص با نام {async.Name}";
+            return await _genericService.AddWithLogAsync(async, log, userId);
         }
-        public async Task<string> Update(int UserId, BusinessEntity.People.Group_People Group_People)
+
+        public async Task<Result> Update(Group_People async, int userId)
         {
-            _logger.LogInformation("Request to update Group_People: {@Group_People}", Group_People);
+            if (string.IsNullOrWhiteSpace(async.Name))
+                return Result.Failure("نام گروه شخص نمی‌تواند خالی باشد.");
 
-            var validator = new ValidatData.People.GroupPeopleValidator();
-            var result = validator.Validate(Group_People);
-
-            if (!result.IsValid)
-            {
-                var errors = string.Join(" | ", result.Errors.Select(e => e.ErrorMessage));
-                _logger.LogWarning("Error validating Group_People: {Errors}", errors);
-                throw new ValidationException("خطا در اعتبارسنجی : " + errors);
-            }
-
-            var existing = await _GroupPeopleRepository.GetById(Group_People.Id);
+            var existing = await _grouppeopleRepo.GetByIdAsync(async.Id);
             if (existing == null)
-            {
-                _logger.LogWarning("Group_People with ID: {Id} not found for update.", Group_People.Id);
-                throw new KeyNotFoundException(" درخواست مورد نظر یافت نشد.");
-            }
+                return Result.Failure("گروه شخص یافت نشد.");
 
-            var message = await _GroupPeopleRepository.Update(UserId, Group_People);
-            _logger.LogInformation("Update result: {Message}", message);
-            return message;
+            var duplicate = (await _grouppeopleRepo
+                .FindAsync(b => b.Name == async.Name && b.Id != async.Id))
+                .Any();
+
+            if (duplicate)
+                return Result.Failure("این نام قبلاً ثبت شده است.");
+
+            string log = $"ویرایش گروه شخص از '{existing.Name}' به '{async.Name}'";
+            return await _genericService.UpdateWithLogAsync(async, log, userId);
         }
-        public async Task<string> Delete(int UserId, int id)
+
+        public async Task<Result> Delete(int bankId, int userId)
         {
-            _logger.LogInformation("Request to delete Group_People with ID: {Id}", id);
-            var message = await _GroupPeopleRepository.Delete(UserId,id);
-            _logger.LogInformation("Delete result: {Message}", message);
-            return message;
+            var bank = await _grouppeopleRepo.GetByIdAsync(bankId);
+            if (bank == null)
+                return Result.Failure("گروه شخص یافت نشد.");
+
+            var hasAccount = (await _peopleRepo
+                .FindAsync(a => a.Id == bankId))
+                .Any();
+
+            if (hasAccount)
+                return Result.Failure("این گروه شخص دارای شخص فعال است و قابل حذف نیست.");
+
+            string log = $"حذف گروه شخص با نام {bank.Name}";
+            return await _genericService.DeleteWithLogAsync(bank, log, userId);
         }
     }
 }

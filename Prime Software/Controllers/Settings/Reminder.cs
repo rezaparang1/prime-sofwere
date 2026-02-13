@@ -1,6 +1,6 @@
 ﻿using BusinessEntity;
 using BusinessLogicLayer;
-using BusinessLogicLayer.Repository.Bank;
+using BusinessLogicLayer.Repository.Fund;
 using Microsoft.AspNetCore.Authentication.OAuth.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -11,7 +11,7 @@ namespace Prime_Software.Controllers.Settings
 {
     [Route("api/Settings/Reminder")]
     [ApiController]
-   // [Authorize]
+    [Authorize]
     public class Reminder : ControllerBase
     {
         private readonly ICurrentUserService _currentUser;

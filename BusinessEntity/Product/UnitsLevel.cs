@@ -10,7 +10,6 @@ namespace BusinessEntity.Product
     public class UnitsLevel
     {
         public int Id { get; set; }
-
         public string Title { get; set; } = string.Empty;
         [JsonIgnore]
         public int ProductId { get; set; }

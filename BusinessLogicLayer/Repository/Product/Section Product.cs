@@ -1,93 +1,84 @@
-﻿using DataAccessLayer.Repository.Product;
-using FluentValidation;
-using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using BusinessLogicLayer.Interface;
+using DataAccessLayer;
+using DataAccessLayer.Interface;
+using BusinessEntity.Product;
 
 namespace BusinessLogicLayer.Repository.Product
 {
     public class SectionProductService : Interface.Producr.ISectionProductService
     {
-        private readonly DataAccessLayer.Interface.Product.ISectionProductRepository _SectionProductRepository;
-        private readonly ILogger<SectionProductService> _logger;
+        private readonly IGenericRepository<Section_Product> _sectionproductRepo;
+        private readonly IGenericRepository<BusinessEntity.Product.Product> _productRepo;
+        private readonly IGenericService<Section_Product> _genericService;
 
-        public SectionProductService(DataAccessLayer.Interface.Product.ISectionProductRepository SectionProductRepository, ILogger<SectionProductService> logger)
+        public SectionProductService(
+            IGenericRepository<Section_Product> sectionproductRepo,
+            IGenericRepository<BusinessEntity.Product.Product> productRepo,
+            IGenericService<Section_Product> genericService)
         {
-            _SectionProductRepository = SectionProductRepository;
-            _logger = logger;
+            _sectionproductRepo = sectionproductRepo;
+            _productRepo = productRepo;
+            _genericService = genericService;
         }
-        //*******READ*********
-        public async Task<IEnumerable<BusinessEntity.Product.Section_Product>> GetAll()
+
+        public async Task<IEnumerable<Section_Product>> GetAll()
         {
-            _logger.LogInformation("Request to receive all Section_Product");
-            var result = await _SectionProductRepository.GetAll();
-            _logger.LogInformation("{Count} items received", result.Count());
-            return result;
+            return await _sectionproductRepo.GetAllAsync();
         }
-        public async Task<BusinessEntity.Product.Section_Product?> GetById(int id)
-        {
-            _logger.LogInformation("Request to receive Section_Product with ID: {Id}", id);
-            var entity = await _SectionProductRepository.GetById(id);
-            if (entity == null)
-                _logger.LogWarning("Section_Product with ID {Id} not found", id);
-            else
-                _logger.LogInformation("Section_Product with ID {Id} was successfully found", id);
 
-            return entity;
+        public async Task<Section_Product?> GetById(int id)
+        {
+            return await _sectionproductRepo.GetByIdAsync(id);
         }
-        //*****CRUD**********
-        public async Task<string> Create(int UserId, BusinessEntity.Product.Section_Product Section_Product)
+
+        public async Task<Result> Create(Section_Product async, int userId)
         {
-            _logger.LogInformation("Request to add new Section_Product: {@Section_Product}", Section_Product);
+            if (string.IsNullOrWhiteSpace(async.Name))
+                return Result.Failure("نام بخش کالا نمی‌تواند خالی باشد.");
 
-            var validator = new ValidatData.Product.SectionProductValidator();
-            var result = validator.Validate(Section_Product);
+            var exists = await _sectionproductRepo.FindAsync(b => b.Name == async.Name);
+            if (exists.Any())
+                return Result.Failure("این نام قبلاً ثبت شده است.");
 
-            if (!result.IsValid)
-            {
-                var errors = string.Join(" | ", result.Errors.Select(e => e.ErrorMessage));
-                _logger.LogWarning("Error validating Section_Product: {Errors}", errors);
-                throw new ValidationException("خطا در اعتبارسنجی : " + errors);
-            }
-
-            var message = await _SectionProductRepository.Create(UserId, Section_Product);
-            _logger.LogInformation("Add result: {Message}", message);
-            return message;
+            string log = $"ثبت بخش کالا با نام {async.Name}";
+            return await _genericService.AddWithLogAsync(async, log, userId);
         }
-        public async Task<string> Update(int UserId, BusinessEntity.Product.Section_Product Section_Product)
+
+        public async Task<Result> Update(Section_Product async, int userId)
         {
-            _logger.LogInformation("Request to update Section_Product: {@Section_Product}", Section_Product);
+            if (string.IsNullOrWhiteSpace(async.Name))
+                return Result.Failure("نام بخش کالا نمی‌تواند خالی باشد.");
 
-            var validator = new ValidatData.Product.SectionProductValidator();
-            var result = validator.Validate(Section_Product);
-
-            if (!result.IsValid)
-            {
-                var errors = string.Join(" | ", result.Errors.Select(e => e.ErrorMessage));
-                _logger.LogWarning("Error validating Section_Product: {Errors}", errors);
-                throw new ValidationException("خطا در اعتبارسنجی : " + errors);
-            }
-
-            var existing = await _SectionProductRepository.GetById(Section_Product.Id);
+            var existing = await _sectionproductRepo.GetByIdAsync(async.Id);
             if (existing == null)
-            {
-                _logger.LogWarning("Section_Product with ID: {Id} not found for update.", Section_Product.Id);
-                throw new KeyNotFoundException(" درخواست مورد نظر یافت نشد.");
-            }
+                return Result.Failure("بخش کالا یافت نشد.");
 
-            var message = await _SectionProductRepository.Update(UserId, Section_Product);
-            _logger.LogInformation("Update result: {Message}", message);
-            return message;
+            var duplicate = (await _sectionproductRepo
+                .FindAsync(b => b.Name == async.Name && b.Id != async.Id))
+                .Any();
+
+            if (duplicate)
+                return Result.Failure("این نام قبلاً ثبت شده است.");
+
+            string log = $"ویرایش بخش کالا از '{existing.Name}' به '{async.Name}'";
+            return await _genericService.UpdateWithLogAsync(async, log, userId);
         }
-        public async Task<string> Delete(int UserId, int id)
+
+        public async Task<Result> Delete(int bankId, int userId)
         {
-            _logger.LogInformation("Request to delete Section_Product with ID: {Id}", id);
-            var message = await _SectionProductRepository.Delete(UserId,id);
-            _logger.LogInformation("Delete result: {Message}", message);
-            return message;
+            var bank = await _sectionproductRepo.GetByIdAsync(bankId);
+            if (bank == null)
+                return Result.Failure("بخش کالا یافت نشد.");
+
+            var hasAccount = (await _productRepo
+                .FindAsync(a => a.Id == bankId))
+                .Any();
+
+            if (hasAccount)
+                return Result.Failure("این بخش کالا دارای کالای فعال است و قابل حذف نیست.");
+
+            string log = $"حذف بخش کالا با نام {bank.Name}";
+            return await _genericService.DeleteWithLogAsync(bank, log, userId);
         }
     }
 }

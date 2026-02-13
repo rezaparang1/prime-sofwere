@@ -1,20 +1,10 @@
-﻿using BusinessEntity;
-using BusinessEntity.Bank;
-using BusinessEntity.Financial_Operations;
+﻿using BusinessEntity.Customer_Club;
 using BusinessEntity.People;
 using BusinessEntity.Product;
 using BusinessEntity.Settings;
 using DataAccessLayer.Interface;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Microsoft.VisualBasic;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
-using System.Security.Principal;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace DataAccessLayer
 {
@@ -25,15 +15,22 @@ namespace DataAccessLayer
             //optionsBuilder.UseNpgsql(configuration.GetConnectionString("DefaultConnection"));
         }
         //Customer_Club
+        public DbSet<BusinessEntity.Customer_Club.ClubDiscount> ClubDiscount { get; set; } = null!;
+        public DbSet<BusinessEntity.Customer_Club.ClubDiscountProduct> ClubDiscountProduct { get; set; } = null!;
         public DbSet<BusinessEntity.Customer_Club.Customer> Customer { get; set; } = null!;
+        public DbSet<BusinessEntity.Customer_Club.CustomerLevel> CustomerLevel { get; set; } = null!;
+        public DbSet<BusinessEntity.Customer_Club.CustomerLevelHistory> CustomerLevelHistory { get; set; } = null!;
+        public DbSet<BusinessEntity.Customer_Club.PointTransaction> PointTransaction { get; set; } = null!;
+        public DbSet<BusinessEntity.Customer_Club.PublicDiscount> PublicDiscount { get; set; } = null!;
+        public DbSet<BusinessEntity.Customer_Club.PublicDiscountProduct> PublicDiscountProduct { get; set; } = null!;
+        public DbSet<BusinessEntity.Customer_Club.Wallet> Wallet { get; set; } = null!;
+        public DbSet<BusinessEntity.Customer_Club.WalletTransaction> WalletTransaction { get; set; } = null!;
         //Bank
-        public DbSet<BusinessEntity.Bank.Definition_Bank> Definition_Bank { get; set; } = null!;
-        public DbSet<BusinessEntity.Bank.Definition_Bank_Account> Definition_Bank_Account { get; set; } = null!;
-        public DbSet<BusinessEntity.Bank.Bank_To_Bank> Bank_To_Bank { get; set; } = null!;
-        public DbSet<BusinessEntity.Bank.Pay_To_Bank> Pay_To_Bank { get; set; } = null!;
+        public DbSet<BusinessEntity.Fund.Definition_Bank> Definition_Bank { get; set; } = null!;
+        public DbSet<BusinessEntity.Fund.Definition_Bank_Account> Definition_Bank_Account { get; set; } = null!;
         //Financial_Operations
-        public DbSet<BusinessEntity.Financial_Operations.Account> Account { get; set; } = null!;
-        public DbSet<BusinessEntity.Financial_Operations.Transaction> Transaction { get; set; } = null!;
+        public DbSet<BusinessEntity.Invoices.Account> Account { get; set; } = null!;
+        public DbSet<BusinessEntity.Invoices.Transaction> Transaction { get; set; } = null!;
         //Fund
         public DbSet<BusinessEntity.Fund.Fund> Fund { get; set; } = null!;
         public DbSet<BusinessEntity.Fund.Cash_Register_To_The_User> Cash_Register_To_The_User { get; set; } = null!;
@@ -69,7 +66,17 @@ namespace DataAccessLayer
         {
             base.OnModelCreating(modelBuilder);
 
-            modelBuilder.Entity<Definition_Bank>(entity =>
+            base.OnModelCreating(modelBuilder);
+
+            // اعمال کانفیگ‌های هر موجودیت
+            ConfigureCustomer(modelBuilder);
+            ConfigureWallet(modelBuilder);
+            ConfigureClubDiscount(modelBuilder);
+            ConfigurePublicDiscount(modelBuilder);
+            ConfigureCustomerLevel(modelBuilder);
+            ConfigurePointTransaction(modelBuilder);
+
+            modelBuilder.Entity<BusinessEntity.Fund.Definition_Bank>(entity =>
             {
                 entity.ToTable("definition_bank"); 
                 entity.HasKey(b => b.Id);
@@ -78,7 +85,7 @@ namespace DataAccessLayer
                       .HasMaxLength(30)
                       .IsRequired();
             });
-            modelBuilder.Entity<Definition_Bank_Account>(entity =>
+            modelBuilder.Entity<BusinessEntity.Fund.Definition_Bank_Account>(entity =>
             {
                 entity.ToTable("definition_bank_account");
                 entity.HasKey(a => a.Id);
@@ -94,21 +101,21 @@ namespace DataAccessLayer
                 entity.Property(a => a.CardNumber)
                       .HasColumnName("card_number")
                       .HasMaxLength(16);
-                modelBuilder.Entity<BusinessEntity.Bank.Definition_Bank_Account>()
+                modelBuilder.Entity<BusinessEntity.Fund.Definition_Bank_Account>()
                  .HasOne(a => a.Bank)
                  .WithMany(b => b.BankAccounts)
                  .HasForeignKey(a => a.BankId);
             });
-            modelBuilder.Entity<Account>()
+            modelBuilder.Entity<BusinessEntity.Invoices.Account>()
             .HasIndex(a => a.AccountName)
             .IsUnique();
 
             // تنظیم نوع عددی برای PostgreSQL
-            modelBuilder.Entity<Account>()
+            modelBuilder.Entity<BusinessEntity.Invoices.Account>()
                 .Property(a => a.Balance)
                 .HasColumnType("numeric(18,2)");
 
-            modelBuilder.Entity<Transaction>()
+            modelBuilder.Entity<BusinessEntity.Invoices.Transaction>()
                 .Property(t => t.Amount)
                 .HasColumnType("numeric(18,2)");
             modelBuilder.Entity<BusinessEntity.Fund.Cash_Register_To_The_User>()
@@ -367,6 +374,283 @@ namespace DataAccessLayer
                 entry.State = EntityState.Modified;
             }
         }
+
+        private void ConfigureCustomer(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<Customer>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => e.Mobile).IsUnique();
+                entity.HasIndex(e => e.Barcode).IsUnique();
+                entity.HasIndex(e => e.Email).IsUnique();
+
+                entity.Property(e => e.FirstName)
+                    .IsRequired()
+                    .HasMaxLength(50);
+
+                entity.Property(e => e.LastName)
+                    .IsRequired()
+                    .HasMaxLength(50);
+
+                entity.Property(e => e.Mobile)
+                    .IsRequired()
+                    .HasMaxLength(12);
+
+                entity.Property(e => e.Email)
+                    .HasMaxLength(80);
+
+                entity.Property(e => e.TotalPurchaseAmount)
+                    .HasColumnType("decimal(18,2)");
+
+                // ارتباطات
+                entity.HasOne(e => e.Wallet)
+                    .WithOne(w => w.Customer)
+                    .HasForeignKey<Wallet>(w => w.CustomerId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.CustomerLevel)
+                    .WithMany(cl => cl.Customers)
+                    .HasForeignKey(e => e.CustomerLevelId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(e => e.Store)
+                    .WithMany(s => s.Customers)
+                    .HasForeignKey(e => e.StoreId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasMany(e => e.LevelHistories)
+                    .WithOne(clh => clh.Customer)
+                    .HasForeignKey(clh => clh.CustomerId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasMany(e => e.PointTransactions)
+                    .WithOne(pt => pt.Customer)
+                    .HasForeignKey(pt => pt.CustomerId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+        }
+
+        private void ConfigureWallet(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<Wallet>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Balance)
+                    .HasColumnType("decimal(18,2)")
+                    .HasDefaultValue(0);
+
+                // ارتباطات
+                entity.HasOne(e => e.Customer)
+                    .WithOne(c => c.Wallet)
+                    .HasForeignKey<Wallet>(e => e.CustomerId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasMany(e => e.Transactions)
+                    .WithOne(wt => wt.Wallet)
+                    .HasForeignKey(wt => wt.WalletId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<WalletTransaction>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Amount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(e => e.Description)
+                    .HasMaxLength(500);
+
+                // ارتباطات
+                entity.HasOne(e => e.Wallet)
+                    .WithMany(w => w.Transactions)
+                    .HasForeignKey(e => e.WalletId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Invoice)
+                    .WithMany(i => i.WalletTransactions)
+                    .HasForeignKey(e => e.InvoiceId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(e => e.ClubDiscount)
+                    .WithMany()
+                    .HasForeignKey(e => e.ClubDiscountId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
+        }
+
+        private void ConfigureClubDiscount(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<ClubDiscount>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Title)
+                    .IsRequired()
+                    .HasMaxLength(200);
+
+                entity.Property(e => e.Description)
+                    .HasMaxLength(1000);
+
+                entity.Property(e => e.Value)
+                    .HasColumnType("decimal(18,2)");
+
+                // ارتباطات
+                entity.HasOne(e => e.Store)
+                    .WithMany(s => s.ClubDiscounts)
+                    .HasForeignKey(e => e.StoreId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasMany(e => e.Products)
+                    .WithOne(p => p.ClubDiscount)
+                    .HasForeignKey(p => p.ClubDiscountId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<ClubDiscountProduct>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.ClubPrice)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(e => e.OriginalPrice)
+                    .HasColumnType("decimal(18,2)");
+
+                // ارتباطات
+                entity.HasOne(e => e.ClubDiscount)
+                    .WithMany(cd => cd.Products)
+                    .HasForeignKey(e => e.ClubDiscountId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Product)
+                    .WithMany()
+                    .HasForeignKey(e => e.ProductId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+        }
+
+        private void ConfigurePublicDiscount(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<PublicDiscount>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Title)
+                    .IsRequired()
+                    .HasMaxLength(200);
+
+                entity.Property(e => e.Description)
+                    .HasMaxLength(1000);
+
+                entity.Property(e => e.Value)
+                    .HasColumnType("decimal(18,2)");
+
+                // ارتباطات
+                entity.HasOne(e => e.Store)
+                    .WithMany(s => s.PublicDiscounts)
+                    .HasForeignKey(e => e.StoreId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasMany(e => e.Products)
+                    .WithOne(p => p.PublicDiscount)
+                    .HasForeignKey(p => p.PublicDiscountId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<PublicDiscountProduct>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.DiscountedPrice)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(e => e.OriginalPrice)
+                    .HasColumnType("decimal(18,2)");
+
+                // ارتباطات
+                entity.HasOne(e => e.PublicDiscount)
+                    .WithMany(pd => pd.Products)
+                    .HasForeignKey(e => e.PublicDiscountId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Product)
+                    .WithMany()
+                    .HasForeignKey(e => e.ProductId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+        }
+
+        private void ConfigureCustomerLevel(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<CustomerLevel>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Name)
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.Property(e => e.Description)
+                    .HasMaxLength(500);
+
+                // ارتباطات
+                entity.HasOne(e => e.Store)
+                    .WithMany(s => s.CustomerLevels)
+                    .HasForeignKey(e => e.StoreId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasMany(e => e.Customers)
+                    .WithOne(c => c.CustomerLevel)
+                    .HasForeignKey(c => c.CustomerLevelId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasMany(e => e.LevelHistories)
+                    .WithOne(clh => clh.CustomerLevel)
+                    .HasForeignKey(clh => clh.CustomerLevelId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<CustomerLevelHistory>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                // ارتباطات
+                entity.HasOne(e => e.Customer)
+                    .WithMany(c => c.LevelHistories)
+                    .HasForeignKey(e => e.CustomerId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.CustomerLevel)
+                    .WithMany(cl => cl.LevelHistories)
+                    .HasForeignKey(e => e.CustomerLevelId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+        }
+
+        private void ConfigurePointTransaction(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<PointTransaction>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Description)
+                    .HasMaxLength(500);
+
+                // ارتباطات
+                entity.HasOne(e => e.Customer)
+                    .WithMany(c => c.PointTransactions)
+                    .HasForeignKey(e => e.CustomerId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Invoice)
+                    .WithMany(i => i.PointTransactions)
+                    .HasForeignKey(e => e.InvoiceId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
+        }
     }
 }
+
 

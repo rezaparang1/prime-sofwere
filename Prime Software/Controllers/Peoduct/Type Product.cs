@@ -1,6 +1,9 @@
 ﻿using BusinessEntity;
 using BusinessLogicLayer;
-using BusinessLogicLayer.Repository.Bank;
+using BusinessLogicLayer.Interface.People;
+using BusinessLogicLayer.Interface.Producr;
+using BusinessLogicLayer.Interface.Settings;
+using BusinessLogicLayer.Repository.Fund;
 using Microsoft.AspNetCore.Authentication.OAuth.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -15,104 +18,72 @@ namespace Prime_Software.Controllers.Peoduct
     public class Type_Product : ControllerBase
     {
         private readonly ICurrentUserService _currentUser;
-        private readonly BusinessLogicLayer.Interface.Producr.ITypeProductService _TypeProductService;
-        private readonly ILogger<Type_Product> _logger;
-        public Type_Product(ICurrentUserService currentUser, BusinessLogicLayer.Interface.Producr.ITypeProductService TypeProductService, ILogger<Type_Product> logger)
+        private readonly ITypeProductService _service;
+
+        public Type_Product(
+            ICurrentUserService currentUser,
+            ITypeProductService service)
         {
             _currentUser = currentUser;
-            _TypeProductService = TypeProductService;
-            _logger = logger;
+            _service = service;
         }
-        //******READ******
+
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            _logger.LogInformation("Request to receive all Type_Product");
-            var getall = await _TypeProductService.GetAll();
-            _logger.LogInformation("{Count} items received", getall.Count());
-            return Ok(getall);
+            var result = await _service.GetAll();
+            return Ok(result);
         }
+
         [HttpGet("{id}")]
-        public async Task<ActionResult<BusinessEntity.Product.Type_Product>> GetById(int id)
+        public async Task<IActionResult> GetById(int id)
         {
-            _logger.LogInformation("Request to receive Type_Product with ID: {Id}", id);
-            var getbyid = await _TypeProductService.GetById(id);
-            if (getbyid == null)
-            {
-                _logger.LogWarning("Type_Product with ID {Id} not found.", id);
+            var result = await _service.GetById(id);
+            if (result == null)
                 return NotFound();
-            }
-            return Ok(getbyid);
+            return Ok(result);
         }
-        //******CRUD*****
+
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] BusinessEntity.Product.Type_Product Type_Product)
+        public async Task<IActionResult> Create([FromBody] BusinessEntity.Product.Type_Product async)
         {
             var userId = _currentUser.UserId!.Value;
-            _logger.LogInformation("Request to create a new Type_Product: {@Type_Product}", Type_Product);
+            var result = await _service.Create(async, userId);
 
-            if (!ModelState.IsValid)
-            {
-                _logger.LogWarning("The creation request was invalid: {Errors}", ModelState);
-                return BadRequest(ModelState);
-            }
-            try
-            {
-                var result = await _TypeProductService.Create(userId, Type_Product);
-                _logger.LogInformation("Successful creation: {Message}", result);
-                return CreatedAtAction(nameof(GetById), new { id = Type_Product.Id }, result);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error creating BanType_ProductkT: {@Type_Product}", Type_Product);
-                return BadRequest(ex.Message);
-            }
+            if (!result.IsSuccess)
+                return BadRequest(result.Message);
+
+            return CreatedAtAction(nameof(GetById), new { id = async.Id }, result.Message);
         }
+
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, [FromBody] BusinessEntity.Product.Type_Product Type_Product)
+        public async Task<IActionResult> Update(int id, [FromBody] BusinessEntity.Product.Type_Product async)
         {
-            var userId = _currentUser.UserId!.Value;
-            _logger.LogInformation("Request update for ID: {Id}, Data: {@Type_Product}", id, Type_Product);
+            if (id != async.Id)
+                return BadRequest("شناسه ارسال شده با مقدار ذخیره شده مطابقت ندارد.");
 
-            if (id != Type_Product.Id)
-            {
-                _logger.LogWarning("The submitted ID does not match the ID in the body.");
-                return BadRequest("شناسه ثبت شده با مقدار ارسال شده مطابقت ندارد.");
-            }
-            try
-            {
-                var result = await _TypeProductService.Update(userId, Type_Product);
-                _logger.LogInformation("Successful update: {Message}", result);
-                return CreatedAtAction(nameof(GetById), new { id = Type_Product.Id }, result);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error updating Type_Product: {@Type_Product}", Type_Product);
-                return BadRequest(ex.Message);
-            }
+            var userId = _currentUser.UserId!.Value;
+            var result = await _service.Update(async, userId);
+
+            if (!result.IsSuccess)
+                return BadRequest(result.Message);
+
+            return Ok(result.Message);
         }
+
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
             var userId = _currentUser.UserId!.Value;
-            _logger.LogInformation("Request to delete Type_Product with ID: {Id}", id);
-            try
-            {
-                var result = await _TypeProductService.Delete(userId, id);
-                if (result.Contains("شناسه"))
-                {
-                    _logger.LogWarning("Type_Product with ID {Id} not found for deletion", id);
-                    return NotFound(result);
-                }
+            var result = await _service.Delete(id, userId);
 
-                _logger.LogInformation("Successfully deleted Type_Product with ID {Id}", id);
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error deleting Type_Product with ID: {Id}", id);
-                return BadRequest(ex.Message);
-            }
+            if (!result.IsSuccess && result.Message.Contains("یافت نشد"))
+                return NotFound(result.Message);
+
+            if (!result.IsSuccess)
+                return BadRequest(result.Message);
+
+            return Ok(result.Message);
         }
     }
 }

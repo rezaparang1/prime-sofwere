@@ -1,4 +1,6 @@
-﻿using BusinessEntity.Fund;
+﻿using BusinessEntity.Customer_Club;
+using BusinessEntity.Fund;
+using DataAccessLayer.Interface.Customer_Club;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System;
@@ -9,159 +11,142 @@ using System.Threading.Tasks;
 
 namespace DataAccessLayer.Repository.Customer_Club
 {
-    public class CustomerRepository : Interface.Customer_Club.ICustomerRepository
+    public class CustomerRepository : Repository<Customer>, ICustomerRepository
     {
-        private readonly Database _context;
-        private readonly ILogger<CustomerRepository> _logger;
-
-        public CustomerRepository(Database context, ILogger<CustomerRepository> logger)
+        public CustomerRepository(Database context) : base(context)
         {
-            _context = context;
-            _logger = logger;
         }
 
-        //*****SEARCH*****
-        public async Task<List<BusinessEntity.Customer_Club.Customer>> Search(string? name = null)
+        public async Task<Customer?> GetByBarcodeAsync(string barcode)
         {
-            var query = _context.Customer.AsQueryable();
-            if (!string.IsNullOrEmpty(name))
-                query = query.Where(r => r.Name.Contains(name));
-
-            return await query.OrderBy(f => f.Name).ToListAsync();
+            return await _dbSet
+                .Include(c => c.Wallet)
+                .Include(c => c.CustomerLevel)
+                .Include(c => c.Store)
+                .FirstOrDefaultAsync(c => c.Barcode == barcode);
         }
-        //******READ*******
-        public async Task<IEnumerable<BusinessEntity.Customer_Club.Customer>> GetAll()
+
+        public async Task<Customer?> GetByMobileAsync(string mobile)
         {
-            return await _context.Customer.OrderBy(f => f.Name).ToListAsync();
+            return await _dbSet
+                .FirstOrDefaultAsync(c => c.Mobile == mobile);
         }
-        public async Task<BusinessEntity.Customer_Club.Customer?> GetById(int id)
+
+        public async Task<Customer?> GetByEmailAsync(string email)
         {
-            return await _context.Customer.FindAsync(id);
+            return await _dbSet
+                .FirstOrDefaultAsync(c => c.Email == email);
         }
-        //****** CREATE *****
-        public async Task<string> Create(int userId, BusinessEntity.Customer_Club.Customer Customer)
+
+        public async Task<Customer?> GetWithDetailsAsync(int id)
         {
-            if (Customer == null)
-                return "داده ارسال نشده است.";
-
-            await using var transaction = await _context.Database.BeginTransactionAsync();
-            try
-            {
-                _logger.LogInformation("شروع ایجاد مشتری جدید: {@Customer}", Customer);
-
-                bool nameExists = await _context.Customer
-                    .AnyAsync(b => b.Phone.Trim().ToLower() == Customer.Phone.Trim().ToLower());
-                if (nameExists)
-                    return "شماره تماس وارد شده تکراری است.";
-
-                // ثبت لاگ کاربر
-                await _context.LogUser.AddAsync(new BusinessEntity.Settings.LogUser
-                {
-                    Description = $"ثبت مشتری با نام {Customer.Name}",
-                    UserId = userId,
-                    Date = DateTime.UtcNow
-                });
-
-                Customer.Id = 0;
-                await _context.Customer.AddAsync(Customer);
-                await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
-
-                _logger.LogInformation("مشتری با موفقیت ایجاد شد. ID: {Id}", Customer.Id);
-                return "عملیات با موفقیت انجام شد.";
-            }
-            catch (Exception ex)
-            {
-                await transaction.RollbackAsync();
-                _logger.LogError(ex, "خطا در ایجاد مشتری: {@Customer}", Customer);
-                return "خطایی در ذخیره‌سازی اطلاعات رخ داد. لطفاً داده‌ها را بررسی کنید.";
-            }
+            return await _dbSet
+                .Include(c => c.Wallet)
+                    .ThenInclude(w => w.Transactions)
+                .Include(c => c.CustomerLevel)
+                .Include(c => c.Store)
+                .Include(c => c.LevelHistories)
+                    .ThenInclude(lh => lh.CustomerLevel)
+                .Include(c => c.PointTransactions)
+                .FirstOrDefaultAsync(c => c.Id == id);
         }
-        public async Task<string> Update(int userId, BusinessEntity.Customer_Club.Customer Customer)
+
+        public async Task<IEnumerable<Customer>> GetCustomersByLevelAsync(int levelId)
         {
-            if (Customer == null)
-                return "داده ارسال نشده است.";
-
-            await using var transaction = await _context.Database.BeginTransactionAsync();
-            try
-            {
-                _logger.LogInformation("در حال بروزرسانی مشتری: {@Customer}", Customer);
-
-                bool nameExists = await _context.Customer
-                    .AnyAsync(b => b.Phone.Trim().ToLower() == Customer.Phone.Trim().ToLower() && b.Id != Customer.Id);
-                if (nameExists)
-                    return "شماره تماس وارد شده تکراری است.";
-
-                var existing = await _context.Customer.FindAsync(Customer.Id);
-                if (existing == null)
-                    return "مشتری مورد نظر یافت نشد.";
-
-                // بروزرسانی فیلدها
-                existing.Name = Customer.Name;
-
-                // ثبت لاگ کاربر
-                await _context.LogUser.AddAsync(new BusinessEntity.Settings.LogUser
-                {
-                    Description = $"ویرایش مشتری با نام {Customer.Name}",
-                    UserId = userId,
-                    Date = DateTime.UtcNow
-                });
-
-                await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
-
-                _logger.LogInformation("مشتری با موفقیت بروزرسانی شد. ID: {Id}", Customer.Id);
-                return "عملیات با موفقیت انجام شد.";
-            }
-            catch (DbUpdateConcurrencyException ex)
-            {
-                await transaction.RollbackAsync();
-                _logger.LogError(ex, "خطای همزمانی هنگام بروزرسانی مشتری با ID: {Id}", Customer.Id);
-                return "این رکورد توسط کاربر دیگری تغییر یافته است. لطفاً مجدد تلاش کنید.";
-            }
-            catch (Exception ex)
-            {
-                await transaction.RollbackAsync();
-                _logger.LogError(ex, "خطا در بروزرسانی مشتری: {@Customer}", Customer);
-                return "خطای غیرمنتظره رخ داد. لطفاً مجدد تلاش کنید.";
-            }
+            return await _dbSet
+                .Where(c => c.CustomerLevelId == levelId && c.IsActive)
+                .ToListAsync();
         }
-        public async Task<string> Delete(int userId, int id)
+
+        public async Task<IEnumerable<Customer>> GetCustomersByStoreAsync(int storeId)
         {
-            await using var transaction = await _context.Database.BeginTransactionAsync();
-            try
+            return await _dbSet
+                .Where(c => c.StoreId == storeId && c.IsActive)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<Customer>> GetActiveCustomersAsync()
+        {
+            return await _dbSet
+                .Where(c => c.IsActive)
+                .OrderByDescending(c => c.RegisterDate)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<Customer>> GetClubMembersAsync()
+        {
+            return await _dbSet
+                .Where(c => c.IsClubMember && c.IsActive)
+                .Include(c => c.CustomerLevel)
+                .OrderByDescending(c => c.TotalPurchaseAmount)
+                .ToListAsync();
+        }
+
+        public async Task<decimal> GetCustomerTotalPurchaseAsync(int customerId)
+        {
+            return await _context.Invoices
+                .Where(i => i.CustomerId == customerId &&
+                           i.TypeInvoices == BusinessEntity.Invoices.Type_Invices.Sales_Invoice)
+                .SumAsync(i => i.TotalSum);
+        }
+
+        public async Task<int> GetCustomerPurchaseCountAsync(int customerId)
+        {
+            return await _context.Invoices
+                .CountAsync(i => i.CustomerId == customerId &&
+                                i.TypeInvoices == BusinessEntity.Invoices.Type_Invices.Sales_Invoice);
+        }
+
+        public async Task<int> GetCustomerPointsAsync(int customerId)
+        {
+            var earned = await _context.PointTransaction
+                .Where(pt => pt.CustomerId == customerId && pt.Type == PointTransactionType.Earn)
+                .SumAsync(pt => pt.Points);
+
+            var used = await _context.PointTransaction
+                .Where(pt => pt.CustomerId == customerId && pt.Type == PointTransactionType.Redeem)
+                .SumAsync(pt => pt.Points);
+
+            return earned - used;
+        }
+
+        public async Task<bool> IsMobileExistsAsync(string mobile, int? excludeCustomerId = null)
+        {
+            var query = _dbSet.Where(c => c.Mobile == mobile);
+
+            if (excludeCustomerId.HasValue)
             {
-                _logger.LogInformation("درخواست حذف مشتری با ID: {Id}", id);
-                var entity = await _context.Customer.FindAsync(id);
-
-                if (entity == null)
-                    return "مشتری مورد نظر یافت نشد.";
-
-                bool hasRelatedAccounts = await _context.Invoices.AnyAsync(a => a.CustomerId == id);
-                if (hasRelatedAccounts)
-                    return "امکان حذف این مشتری به دلیل وجود حساب‌های وابسته وجود ندارد.";
-                
-                // ثبت لاگ
-                await _context.LogUser.AddAsync(new BusinessEntity.Settings.LogUser
-                {
-                    Description = $"حذف مشتری با نام {entity.Name}",
-                    UserId = userId,
-                    Date = DateTime.UtcNow
-                });
-
-                _context.Customer.Remove(entity);
-                await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
-
-                _logger.LogInformation("مشتری با موفقیت حذف شد. ID: {Id}", id);
-                return "عملیات با موفقیت انجام شد.";
+                query = query.Where(c => c.Id != excludeCustomerId.Value);
             }
-            catch (Exception ex)
+
+            return await query.AnyAsync();
+        }
+
+        public async Task<bool> IsEmailExistsAsync(string email, int? excludeCustomerId = null)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+                return false;
+
+            var query = _dbSet.Where(c => c.Email == email);
+
+            if (excludeCustomerId.HasValue)
             {
-                await transaction.RollbackAsync();
-                _logger.LogError(ex, "خطا در حذف مشتری با ID: {Id}", id);
-                return "خطایی در عملیات حذف رخ داد. لطفاً با پشتیبانی تماس بگیرید.";
+                query = query.Where(c => c.Id != excludeCustomerId.Value);
             }
+
+            return await query.AnyAsync();
+        }
+
+        public async Task<bool> IsBarcodeExistsAsync(string barcode, int? excludeCustomerId = null)
+        {
+            var query = _dbSet.Where(c => c.Barcode == barcode);
+
+            if (excludeCustomerId.HasValue)
+            {
+                query = query.Where(c => c.Id != excludeCustomerId.Value);
+            }
+
+            return await query.AnyAsync();
         }
     }
 }

@@ -2,16 +2,11 @@
 using DataAccessLayer.Interface.Settings;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
-using System.Threading.Tasks;
+
 
 namespace DataAccessLayer.Repository.Settings
 {
-    public class UserRepository : Interface.Settings.IUserRepository
+    public class UserRepository : IUserRepository
     {
         private readonly Database _context;
         private readonly ILogger<UserRepository> _logger;
@@ -21,7 +16,8 @@ namespace DataAccessLayer.Repository.Settings
             _context = context;
             _logger = logger;
         }
-        //******READ*******
+
+        // ***** GetActiveUsersAsync *****
         public async Task<List<UserComboDto>> GetActiveUsersAsync()
         {
             return await _context.User
@@ -35,28 +31,28 @@ namespace DataAccessLayer.Repository.Settings
                 .OrderBy(u => u.FullName)
                 .ToListAsync();
         }
+
+        // ***** GetAll *****
         public async Task<IEnumerable<User>> GetAll()
         {
-            _logger.LogInformation("All v have started to be received from the database.");
-
-            var result = await _context.User.ToListAsync();
-
-            _logger.LogInformation("{Count} records received.", result.Count);
-            return result;
+            return await _context.User
+                .Include(u => u.People)
+                .Include(u => u.Group_User)
+                .Where(u => !u.IsDelete)
+                .OrderBy(u => u.UserName)
+                .ToListAsync();
         }
+
+        // ***** GetById *****
         public async Task<User?> GetById(int id)
         {
-            _logger.LogInformation("Request to receive User  with ID: {Id}", id);
-
-            var entity = await _context.User.FindAsync(id);
-
-            if (entity == null)
-                _logger.LogWarning("User  with ID: {Id} not found", id);
-            else
-                _logger.LogInformation("User name with ID: {Id} successfully retrieved", id);
-
-            return entity;
+            return await _context.User
+                .Include(u => u.People)
+                .Include(u => u.Group_User)
+                .FirstOrDefaultAsync(u => u.Id == id && !u.IsDelete);
         }
+
+        // ***** FindByUserNameAndPassword (برای لاگین) - بدون تغییر *****
         public async Task<User?> FindByUserNameAndPassword(string? userName = null, string? password = null)
         {
             _logger.LogInformation("Request to receive User with UserName: {UserName}", userName);
@@ -67,7 +63,7 @@ namespace DataAccessLayer.Repository.Settings
             var entity = await _context.User
                 .Include(u => u.Group_User)
                     .ThenInclude(g => g.AccessLevel)
-                .FirstOrDefaultAsync(r => r.UserName == userName);
+                .FirstOrDefaultAsync(r => r.UserName == userName && !r.IsDelete);
 
             if (entity == null)
             {
@@ -85,175 +81,145 @@ namespace DataAccessLayer.Repository.Settings
             return entity;
         }
 
-        //******CRUD*****
-        private DateTime ToUtcSafe(DateTime dt)
-        {
-            // اگر قبلاً UTC است، برگردان
-            if (dt.Kind == DateTimeKind.Utc) return dt;
-
-            // اگر Local است، به UTC تبدیل کن
-            if (dt.Kind == DateTimeKind.Local) return dt.ToUniversalTime();
-
-            // اگر Unspecified است، فرض کن مشتری UTC فرستاده (یا اگر می‌خواهی فرض Local بگیری از dt.ToUniversalTime())
-            // اینجا ما مشخص می‌کنیم که Unspecified را به UTC تگ می‌کنیم (بدون تبدیل)
-            return DateTime.SpecifyKind(dt, DateTimeKind.Utc);
-        }
-        public async Task<string> Create(int currentUserId, User user)
+        // ***** Create *****
+        public async Task<Result> Create(User user)
         {
             try
             {
-                if (user == null) return "درخواست نامعتبر است.";
-
-                // duplicate username check
+                // بررسی تکراری بودن نام کاربری
                 bool nameExists = await _context.User
-                    .AnyAsync(u => u.UserName.Trim().ToLower() == user.UserName.Trim().ToLower());
-                if (nameExists) return "نام کاربری وارد شده تکراری است.";
-
-                // FK checks (مثال)
-                bool peopleExists = await _context.People.AnyAsync(p => p.Id == user.PeopleId);
-                if (!peopleExists) return "فرد انتخاب شده معتبر نیست.";
-
-                bool groupExists = await _context.Group_User.AnyAsync(g => g.Id == user.GroupUserId);
-                if (!groupExists) return "گروه انتخاب شده معتبر نیست.";
-
-                // hash password
-                string hash = PasswordHasher.Hash(user.Password ?? string.Empty);
-
-                // Normalize dates to UTC
-                DateTime validityUtc = user.Validity == default ? DateTime.UtcNow.AddYears(1) : ToUtcSafe(user.Validity);
-                DateTime lastActivityUtc = user.LastActivity == default ? DateTime.UtcNow : ToUtcSafe(user.LastActivity);
-
-                var userEntity = new BusinessEntity.Settings.User
-                {
-                    UserName = user.UserName.Trim(),
-                    Password = hash,
-                    PeopleId = user.PeopleId,
-                    GroupUserId = user.GroupUserId,
-                    IsActive = user.IsActive,
-                    IsDelete = false,
-                    Validity = validityUtc,
-                    LastActivity = lastActivityUtc,
-                    ImageAddress = user.ImageAddress
-                };
-
-                var log = new BusinessEntity.Settings.LogUser
-                {
-                    Description = $"ثبت کاربر با نام {userEntity.UserName}",
-                    UserId = currentUserId,
-                    Date = DateTime.UtcNow // لاگ هم UTC باشه
-                };
-
-                await _context.LogUser.AddAsync(log);
-                await _context.User.AddAsync(userEntity);
-
-                int saved = await _context.SaveChangesAsync();
-                if (saved > 0)
-                {
-                    _logger.LogInformation("User added. ID: {Id}", userEntity.Id);
-                    return "عملیات با موفقیت انجام شد.";
-                }
-                return "هیچ تغییری اعمال نشد.";
-            }
-            catch (DbUpdateException dbEx)
-            {
-                var sqlMessage = dbEx.InnerException?.Message ?? dbEx.Message;
-                _logger.LogError(dbEx, "Database error while adding user: {SqlMessage}", sqlMessage);
-                return $"خطایی در ذخیره اطلاعات رخ داد: {sqlMessage}";
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Unexpected error while adding user");
-                return "خطای غیرمنتظره رخ داد. لطفاً با پشتیبانی تماس بگیرید.";
-            }
-        }
-        public async Task<string> Update(int currentUserId, User dto)
-        {
-            try
-            {
-                _logger.LogInformation("Update request for User: {@dto}", dto);
-
-                if (dto == null)
-                    return "درخواست نامعتبر است.";
-
-                // بررسی اینکه کاربری با این ID وجود دارد
-                var user = await _context.User.FindAsync(dto.Id);
-
-                if (user == null)
-                {
-                    _logger.LogWarning("User ID {Id} not found.", dto.Id);
-                    return "شناسه وارد شده با شناسه ذخیره شده مطابقت ندارد.";
-                }
-
-                // چک عدم تکراری بودن یوزرنیم
-                bool nameExists = await _context.User
-                    .AnyAsync(x => x.UserName.ToLower() == dto.UserName.ToLower() && x.Id != dto.Id);
+                    .AnyAsync(u => u.UserName.Trim().ToLower() == user.UserName.Trim().ToLower() && !u.IsDelete);
 
                 if (nameExists)
-                {
-                    return "نام کاربری وارد شده تکراری است.";
-                }
+                    return Result.Failure("نام کاربری وارد شده تکراری است.");
 
-                // چک صحت FK ها
-                bool peopleExists = await _context.People.AnyAsync(p => p.Id == dto.PeopleId);
+                // بررسی وجود شخص
+                bool peopleExists = await _context.People
+                    .AnyAsync(p => p.Id == user.PeopleId && !p.IsDelete);
+
                 if (!peopleExists)
-                    return "فرد انتخاب شده معتبر نیست.";
+                    return Result.Failure("فرد انتخاب شده معتبر نیست.");
 
-                bool groupExists = await _context.Group_User.AnyAsync(g => g.Id == dto.GroupUserId);
+                // بررسی وجود گروه کاربری
+                bool groupExists = await _context.Group_User
+                    .AnyAsync(g => g.Id == user.GroupUserId);
+
                 if (!groupExists)
-                    return "گروه انتخاب‌شده معتبر نیست.";
+                    return Result.Failure("گروه انتخاب شده معتبر نیست.");
 
-                // اعمال تغییرات فقط روی فیلدهای مجاز
-                user.UserName = dto.UserName.Trim();
-                user.PeopleId = dto.PeopleId;
-                user.GroupUserId = dto.GroupUserId;
-                user.IsActive = dto.IsActive;
-                user.ImageAddress = dto.ImageAddress;
+                // هش کردن رمز عبور
+                string hash = PasswordHasher.Hash(user.Password ?? string.Empty);
 
-                // تاریخ‌ها باید UTC باشند
-                user.Validity = ToUtcSafe(dto.Validity);
+                // نرمال‌سازی تاریخ‌ها به UTC
+                DateTime validityUtc = user.Validity == default ? DateTime.UtcNow.AddYears(1) : ToUtcSafe(user.Validity);
+                DateTime lastActivityUtc = DateTime.UtcNow;
 
-                // اگر رمز جدید فرستاده شده (رمز قبلی حفظ نشود)
-                if (!string.IsNullOrWhiteSpace(dto.Password))
-                {
-                    user.Password = PasswordHasher.Hash(dto.Password);
-                }
+                user.Password = hash;
+                user.Validity = validityUtc;
+                user.LastActivity = lastActivityUtc;
+                user.IsDelete = false;
+                user.CurrentSessionId = null;
 
-                // لاگ ثبت تغییر
-                var log = new LogUser
-                {
-                    Description = $"ویرایش کاربر {user.UserName}",
-                    Date = DateTime.UtcNow,
-                    UserId = currentUserId
-                };
+                await _context.User.AddAsync(user);
 
-                await _context.LogUser.AddAsync(log);
-
-                int saved = await _context.SaveChangesAsync();
-
-                if (saved > 0)
-                {
-                    _logger.LogInformation("User {Id} updated successfully.", user.Id);
-                    return "عملیات با موفقیت انجام شد.";
-                }
-
-                return "هیچ تغییری انجام نشد.";
-            }
-            catch (DbUpdateConcurrencyException ex)
-            {
-                _logger.LogError(ex, "Concurrency error for User ID {Id}", dto.Id);
-                return "این رکورد همزمان توسط کاربر دیگری ویرایش شده است.";
-            }
-            catch (DbUpdateException dbEx)
-            {
-                string msg = dbEx.InnerException?.Message ?? dbEx.Message;
-                _logger.LogError(dbEx, "Database error updating User: {Message}", msg);
-                return $"خطایی در ذخیره اطلاعات رخ داد: {msg}";
+                return Result.Success("عملیات با موفقیت انجام شد.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unexpected error on update User.");
-                return "خطای غیرمنتظره رخ داد.";
+                _logger.LogError(ex, "Error creating User: {@User}", user);
+                return Result.Failure($"خطا در ایجاد کاربر: {ex.Message}");
             }
+        }
+
+        // ***** Update *****
+        public async Task<Result> Update(User user)
+        {
+            try
+            {
+                // بررسی وجود کاربر
+                var existingUser = await _context.User
+                    .FirstOrDefaultAsync(u => u.Id == user.Id && !u.IsDelete);
+
+                if (existingUser == null)
+                    return Result.Failure("کاربر یافت نشد.");
+
+                // بررسی تکراری بودن نام کاربری (به جز خودش)
+                bool nameExists = await _context.User
+                    .AnyAsync(u => u.Id != user.Id &&
+                                  u.UserName.Trim().ToLower() == user.UserName.Trim().ToLower() &&
+                                  !u.IsDelete);
+
+                if (nameExists)
+                    return Result.Failure("نام کاربری وارد شده تکراری است.");
+
+                // بررسی وجود شخص
+                bool peopleExists = await _context.People
+                    .AnyAsync(p => p.Id == user.PeopleId && !p.IsDelete);
+
+                if (!peopleExists)
+                    return Result.Failure("فرد انتخاب شده معتبر نیست.");
+
+                // بررسی وجود گروه کاربری
+                bool groupExists = await _context.Group_User
+                    .AnyAsync(g => g.Id == user.GroupUserId);
+
+                if (!groupExists)
+                    return Result.Failure("گروه انتخاب‌شده معتبر نیست.");
+
+                // به‌روزرسانی فیلدها
+                existingUser.UserName = user.UserName.Trim();
+                existingUser.PeopleId = user.PeopleId;
+                existingUser.GroupUserId = user.GroupUserId;
+                existingUser.IsActive = user.IsActive;
+                existingUser.ImageAddress = user.ImageAddress;
+                existingUser.Validity = ToUtcSafe(user.Validity);
+
+                // اگر رمز عبور جدید ارسال شده باشد
+                if (!string.IsNullOrWhiteSpace(user.Password))
+                {
+                    existingUser.Password = PasswordHasher.Hash(user.Password);
+                }
+
+                return Result.Success("عملیات با موفقیت انجام شد.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating User: {@User}", user);
+                return Result.Failure($"خطا در به‌روزرسانی کاربر: {ex.Message}");
+            }
+        }
+
+        // ***** Delete *****
+        public async Task<Result> Delete(int id)
+        {
+            try
+            {
+                var user = await _context.User
+                    .FirstOrDefaultAsync(u => u.Id == id && !u.IsDelete);
+
+                if (user == null)
+                    return Result.Failure("کاربر یافت نشد.");
+
+                // Soft Delete
+                user.IsDelete = true;
+                user.IsActive = false;
+                user.CurrentSessionId = null;
+
+                return Result.Success("کاربر با موفقیت حذف شد.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting User with ID: {Id}", id);
+                return Result.Failure($"خطا در حذف کاربر: {ex.Message}");
+            }
+        }
+
+        // ***** کمکی: تبدیل تاریخ به UTC *****
+        private DateTime ToUtcSafe(DateTime dt)
+        {
+            if (dt.Kind == DateTimeKind.Utc) return dt;
+            if (dt.Kind == DateTimeKind.Local) return dt.ToUniversalTime();
+            return DateTime.SpecifyKind(dt, DateTimeKind.Utc);
         }
     }
 }

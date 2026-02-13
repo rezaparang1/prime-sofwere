@@ -1,92 +1,84 @@
-﻿using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using FluentValidation;
+﻿using BusinessLogicLayer.Interface;
+using DataAccessLayer;
+using DataAccessLayer.Interface;
+using BusinessEntity.Settings;
 
 namespace BusinessLogicLayer.Repository.Settings
 {
-    public class GroupUserService : Interface.Settings.IGroupUserService
+    public class GroupUserService : BusinessLogicLayer.Interface.Settings.IGroupUserService
     {
-        private readonly DataAccessLayer.Interface.Settings.IGroupUserRepository _GroupUserRepository;
-        private readonly ILogger<GroupUserService> _logger;
+        private readonly IGenericRepository<Group_User> _groupuserRepo;
+        private readonly IGenericRepository<User> _userRepo;
+        private readonly IGenericService<Group_User> _genericService;
 
-        public GroupUserService(DataAccessLayer.Interface.Settings.IGroupUserRepository GroupUserRepository, ILogger<GroupUserService> logger)
+        public GroupUserService(
+            IGenericRepository<Group_User> bankRepo,
+            IGenericRepository<User> accountRepo,
+            IGenericService<Group_User> genericService)
         {
-            _GroupUserRepository = GroupUserRepository;
-            _logger = logger;
+            _groupuserRepo = bankRepo;
+            _userRepo = accountRepo;
+            _genericService = genericService;
         }
-        //*******READ*********
-        public async Task<IEnumerable<BusinessEntity.Settings.Group_User>> GetAll()
+
+        public async Task<IEnumerable<Group_User>> GetAll()
         {
-            _logger.LogInformation("Request to receive all Group_User");
-            var result = await _GroupUserRepository.GetAll();
-            _logger.LogInformation("{Count} items received", result.Count());
-            return result;
+            return await _groupuserRepo.GetAllAsync();
         }
-        public async Task<BusinessEntity.Settings.Group_User?> GetById(int id)
-        {
-            _logger.LogInformation("Request to receive Group_User with ID: {Id}", id);
-            var entity = await _GroupUserRepository.GetById(id);
-            if (entity == null)
-                _logger.LogWarning("Group_User with ID {Id} not found", id);
-            else
-                _logger.LogInformation("Group_User with ID {Id} was successfully found", id);
 
-            return entity;
+        public async Task<Group_User?> GetById(int id)
+        {
+            return await _groupuserRepo.GetByIdAsync(id);
         }
-        //*****CRUD**********
-        public async Task<string> Create(int UserId, BusinessEntity.Settings.Group_User Group_User)
+
+        public async Task<Result> Create(Group_User aync, int userId)
         {
-            _logger.LogInformation("Request to add new Group_User: {@Group_User}", Group_User);
+            if (string.IsNullOrWhiteSpace(aync.Name))
+                return Result.Failure("نام گروه کاربری نمی‌تواند خالی باشد.");
 
-            var validator = new ValidatData.Settings.GroupUserValidator();
-            var result = validator.Validate(Group_User);
+            var exists = await _groupuserRepo.FindAsync(b => b.Name == aync.Name);
+            if (exists.Any())
+                return Result.Failure("این نام گروه کاربری قبلاً ثبت شده است.");
 
-            if (!result.IsValid)
-            {
-                var errors = string.Join(" | ", result.Errors.Select(e => e.ErrorMessage));
-                _logger.LogWarning("Error validating Group_User: {Errors}", errors);
-                throw new ValidationException("خطا در اعتبارسنجی : " + errors);
-            }
-
-            var message = await _GroupUserRepository.Create(UserId, Group_User);
-            _logger.LogInformation("Add result: {Message}", message);
-            return message;
+            string log = $"ثبت گروه کاربری با نام {aync.Name}";
+            return await _genericService.AddWithLogAsync(aync, log, userId);
         }
-        public async Task<string> Update(int UserId, BusinessEntity.Settings.Group_User Group_User)
+
+        public async Task<Result> Update(Group_User aync, int userId)
         {
-            _logger.LogInformation("Request to update Group_User: {@Group_User}", Group_User);
+            if (string.IsNullOrWhiteSpace(aync.Name))
+                return Result.Failure("نام گروه کاربری نمی‌تواند خالی باشد.");
 
-            var validator = new ValidatData.Settings.GroupUserValidator();
-            var result = validator.Validate(Group_User);
+            var existingBank = await _groupuserRepo.GetByIdAsync(aync.Id);
+            if (existingBank == null)
+                return Result.Failure("گروه کاربری یافت نشد.");
 
-            if (!result.IsValid)
-            {
-                var errors = string.Join(" | ", result.Errors.Select(e => e.ErrorMessage));
-                _logger.LogWarning("Error validating Group_User: {Errors}", errors);
-                throw new ValidationException("خطا در اعتبارسنجی : " + errors);
-            }
+            var duplicate = (await _groupuserRepo
+                .FindAsync(b => b.Name == aync.Name && b.Id != aync.Id))
+                .Any();
 
-            var existing = await _GroupUserRepository.GetById(Group_User.Id);
-            if (existing == null)
-            {
-                _logger.LogWarning("Group_User with ID: {Id} not found for update.", Group_User.Id);
-                throw new KeyNotFoundException(" درخواست مورد نظر یافت نشد.");
-            }
+            if (duplicate)
+                return Result.Failure("این نام گروه کاربری قبلاً ثبت شده است.");
 
-            var message = await _GroupUserRepository.Update(UserId, Group_User);
-            _logger.LogInformation("Update result: {Message}", message);
-            return message;
+            string log = $"ویرایش گروه کاربری از '{existingBank.Name}' به '{aync.Name}'";
+            return await _genericService.UpdateWithLogAsync(aync, log, userId);
         }
-        public async Task<string> Delete(int UserId, int id)
+
+        public async Task<Result> Delete(int ayncId, int userId)
         {
-            _logger.LogInformation("Request to delete Group_User with ID: {Id}", id);
-            var message = await _GroupUserRepository.Delete(id, UserId);
-            _logger.LogInformation("Delete result: {Message}", message);
-            return message;
+            var bank = await _groupuserRepo.GetByIdAsync(ayncId);
+            if (bank == null)
+                return Result.Failure("گروه کاربری یافت نشد.");
+
+            var hasAccount = (await _userRepo
+                .FindAsync(a => a.Id == ayncId))
+                .Any();
+
+            if (hasAccount)
+                return Result.Failure("این گروه کاربری دارای کاربر فعال است و قابل حذف نیست.");
+
+            string log = $"حذف گروه کاربری با نام {bank.Name}";
+            return await _genericService.DeleteWithLogAsync(bank, log, userId);
         }
     }
 }

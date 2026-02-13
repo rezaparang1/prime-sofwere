@@ -1,118 +1,164 @@
-﻿using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using FluentValidation;
+﻿using BusinessEntity.DTO.People;
+using BusinessLogicLayer.Interface;
+using BusinessLogicLayer.Interface.People;
+using DataAccessLayer;
+using DataAccessLayer.Interface.Product;
 
 namespace BusinessLogicLayer.Repository.People
 {
-    public class PeopleService : Interface.People.IPeopleService
+    public class PeopleService : IPeopleService
     {
-        private readonly DataAccessLayer.Interface.People.IPeopleRepository _PeopleRepository;
-        private readonly ILogger<PeopleService> _logger;
+        private readonly IPeopleRepository _peopleRepository;
+        private readonly ILogService _logService;
+        private readonly Database _context;
 
-        public PeopleService(DataAccessLayer.Interface.People.IPeopleRepository PeopleRepository, ILogger<PeopleService> logger)
+        public PeopleService(
+            IPeopleRepository peopleRepository,
+            ILogService logService,
+            Database context)
         {
-            _PeopleRepository = PeopleRepository;
-            _logger = logger;
+            _peopleRepository = peopleRepository;
+            _logService = logService;
+            _context = context;
         }
-        //*******SEARCH*******
-        public async Task<List<BusinessEntity.People.People>> Search(string? FirstName = null, string? LastName = null, string? PeoplId = null, string? Phone = null, string? Address = null, int? GropPeople = null, bool? Business = null, bool? User = null, bool? Employee = null, bool? Investor = null)
-        {
-            _logger.LogInformation("Request Group_People search with name filter: {FirstName}{LastName}{PeoplId}{Phone}{Address}{GropPeople}{Business}{User}{Employee}{Investor}", FirstName, LastName, PeoplId, Phone, GropPeople, Address, Business, User, Employee, Investor);
-            var result = await _PeopleRepository.Search(FirstName,LastName,PeoplId,Phone,Address,GropPeople,Business,User,Employee,Investor);
-            _logger.LogInformation("{Count} results found", result.Count);
-            return result;
-        }
-        public async Task<BusinessEntity.People.People?> GetPeolpeById(string? IdPeople)
-        {
-            _logger.LogInformation("Request to receive Product with ID: {Id}", IdPeople);
-            var entity = await _PeopleRepository.GetPeolpeById(IdPeople);
-            if (entity == null)
-                _logger.LogWarning("Product with ID {IdPeople} not found", IdPeople);
-            else
-                _logger.LogInformation("Product with ID {IdPeople} was successfully found", IdPeople);
 
-            return entity;
-        }
-        //*******READ*********
-        public async Task<List<BusinessEntity.People.PeopleComboDto>> GetPeopleForComboAsync()
+        public async Task<List<PeopleComboDto>> GetPeopleForComboAsync()
         {
-            _logger.LogInformation("Request GetPeopleForComboAsync");
-            var result = await _PeopleRepository.GetPeopleForComboAsync();
-            _logger.LogInformation("{Count} results found", result.Count);
-            return result;
+            return await _peopleRepository.GetPeopleForComboAsync();
         }
+
+        public async Task<List<BusinessEntity.People.People>> Search(
+            string? firstName = null, string? lastName = null,
+            string? phone = null, string? address = null, int? groupPeople = null,
+            bool? business = null, bool? user = null, bool? employee = null,
+            bool? investor = null)
+        {
+            return await _peopleRepository.Search(firstName, lastName, phone, address,
+                groupPeople, business, user, employee, investor);
+        }
+
         public async Task<IEnumerable<BusinessEntity.People.People>> GetAll()
         {
-            _logger.LogInformation("Request to receive all People");
-            var result = await _PeopleRepository.GetAll();
-            _logger.LogInformation("{Count} items received", result.Count());
-            return result;
+            return await _peopleRepository.GetAll();
         }
+
         public async Task<BusinessEntity.People.People?> GetById(int id)
         {
-            _logger.LogInformation("Request to receive People with ID: {Id}", id);
-            var entity = await _PeopleRepository.GetById(id);
-            if (entity == null)
-                _logger.LogWarning("People with ID {Id} not found", id);
-            else
-                _logger.LogInformation("People with ID {Id} was successfully found", id);
-
-            return entity;
+            return await _peopleRepository.GetById(id);
         }
-        //*****CRUD**********
-        public async Task<string> Create(int UserId, BusinessEntity.People.People People)
+
+        public async Task<BusinessEntity.People.People?> GetPeopleById(string? idPeople)
         {
-            _logger.LogInformation("Request to add new People: {@People}", People);
-
-            var validator = new ValidatData.People.PeopleValidator();
-            var result = validator.Validate(People);
-
-            if (!result.IsValid)
-            {
-                var errors = string.Join(" | ", result.Errors.Select(e => e.ErrorMessage));
-                _logger.LogWarning("Error validating People: {Errors}", errors);
-                throw new ValidationException("خطا در اعتبارسنجی : " + errors);
-            }
-
-            var message = await _PeopleRepository.Create(UserId, People);
-            _logger.LogInformation("Add result: {Message}", message);
-            return message;
+            return await _peopleRepository.GetPeopleById(idPeople);
         }
-        public async Task<string> Update(int UserId, BusinessEntity.People.People People)
+
+        public async Task<Result> Create(BusinessEntity.People.People person, int userId)
         {
-            _logger.LogInformation("Request to update People: {@People}", People);
+            await using var transaction = await _context.Database.BeginTransactionAsync();
 
-            var validator = new ValidatData.People.PeopleValidator();
-            var result = validator.Validate(People);
-
-            if (!result.IsValid)
+            try
             {
-                var errors = string.Join(" | ", result.Errors.Select(e => e.ErrorMessage));
-                _logger.LogWarning("Error validating People: {Errors}", errors);
-                throw new ValidationException("خطا در اعتبارسنجی : " + errors);
-            }
+                // اعتبارسنجی
+                if (string.IsNullOrWhiteSpace(person.IdPeople))
+                    return Result.Failure("کد شخص نمی‌تواند خالی باشد.");
 
-            var existing = await _PeopleRepository.GetById(People.Id);
-            if (existing == null)
+                if (string.IsNullOrWhiteSpace(person.FirstName) || string.IsNullOrWhiteSpace(person.LastName))
+                    return Result.Failure("نام و نام خانوادگی نمی‌تواند خالی باشد.");
+
+                if (string.IsNullOrWhiteSpace(person.Phone))
+                    return Result.Failure("شماره تماس نمی‌تواند خالی باشد.");
+
+                if (person.TypePeopleId <= 0)
+                    return Result.Failure("نوع شخص باید انتخاب شود.");
+
+                // ایجاد شخص
+                var result = await _peopleRepository.Create(person);
+                if (!result.IsSuccess)
+                    return result;
+
+                // ذخیره تغییرات
+                await _context.SaveChangesAsync();
+
+                // ثبت لاگ
+                string logText = $"ثبت شخص جدید با نام '{person.FirstName} {person.LastName}' و کد '{person.IdPeople}'";
+                await _logService.CreateLogAsync(logText, userId);
+
+                await transaction.CommitAsync();
+                return Result.Success("شخص با موفقیت ایجاد شد.");
+            }
+            catch (Exception ex)
             {
-                _logger.LogWarning("People with ID: {Id} not found for update.", People.Id);
-                throw new KeyNotFoundException(" درخواست مورد نظر یافت نشد.");
+                await transaction.RollbackAsync();
+                return Result.Failure($"خطا در ایجاد شخص: {ex.Message}");
             }
-
-            var message = await _PeopleRepository.Update(UserId, People);
-            _logger.LogInformation("Update result: {Message}", message);
-            return message;
         }
-        public async Task<string> Delete(int UserId, int id)
+
+        public async Task<Result> Update(BusinessEntity.People.People person, int userId)
         {
-            _logger.LogInformation("Request to delete People with ID: {Id}", id);
-            var message = await _PeopleRepository.Delete(id, UserId);
-            _logger.LogInformation("Delete result: {Message}", message);
-            return message;
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+
+            try
+            {
+                // اعتبارسنجی
+                if (string.IsNullOrWhiteSpace(person.IdPeople))
+                    return Result.Failure("کد شخص نمی‌تواند خالی باشد.");
+
+                if (string.IsNullOrWhiteSpace(person.FirstName) || string.IsNullOrWhiteSpace(person.LastName))
+                    return Result.Failure("نام و نام خانوادگی نمی‌تواند خالی باشد.");
+
+                // بروزرسانی شخص
+                var result = await _peopleRepository.Update(person);
+                if (!result.IsSuccess)
+                    return result;
+
+                // ذخیره تغییرات
+                await _context.SaveChangesAsync();
+
+                // ثبت لاگ
+                string logText = $"ویرایش شخص با شناسه {person.Id} و نام '{person.FirstName} {person.LastName}'";
+                await _logService.CreateLogAsync(logText, userId);
+
+                await transaction.CommitAsync();
+                return Result.Success("شخص با موفقیت بروزرسانی شد.");
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                return Result.Failure($"خطا در بروزرسانی شخص: {ex.Message}");
+            }
+        }
+
+        public async Task<Result> Delete(int id, int userId)
+        {
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+
+            try
+            {
+                // دریافت اطلاعات شخص برای لاگ
+                var person = await _peopleRepository.GetById(id);
+                if (person == null)
+                    return Result.Failure("شخص یافت نشد.");
+
+                // حذف شخص
+                var result = await _peopleRepository.Delete(id);
+                if (!result.IsSuccess)
+                    return result;
+
+                // ذخیره تغییرات
+                await _context.SaveChangesAsync();
+
+                // ثبت لاگ
+                string logText = $"حذف شخص با نام '{person.FirstName} {person.LastName}'";
+                await _logService.CreateLogAsync(logText, userId);
+
+                await transaction.CommitAsync();
+                return Result.Success("شخص با موفقیت حذف شد.");
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                return Result.Failure($"خطا در حذف شخص: {ex.Message}");
+            }
         }
     }
 }

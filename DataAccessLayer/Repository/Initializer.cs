@@ -167,20 +167,20 @@ namespace DataAccessLayer.Repository
             var bankNames = new[] { "ملت", "ملی", "تجارت", "کشاورزی", "صادرات", "رفاه", "سامان", "پارسیان", "سپه", "مسکن" };
             foreach (var name in bankNames)
             {
-                var bank = await _db.Set<BusinessEntity.Bank.Definition_Bank>()
+                var bank = await _db.Set<BusinessEntity.Fund.Definition_Bank>()
                     .IgnoreQueryFilters()
                     .FirstOrDefaultAsync(b => b.Name == name);
                 if (bank != null)
                     bank.IsDelete = false;
                 else
-                    _db.Add(new BusinessEntity.Bank.Definition_Bank { Name = name, IsDelete = false });
+                    _db.Add(new BusinessEntity.Fund.Definition_Bank { Name = name, IsDelete = false });
             }
             await _db.SaveChangesAsync();
 
             // -----------------------
             // Accountها
             // -----------------------
-            var fundAccount = await _db.Set<BusinessEntity.Financial_Operations.Account>()
+            var fundAccount = await _db.Set<BusinessEntity.Invoices.Account>()
                 .IgnoreQueryFilters()
                 .FirstOrDefaultAsync(a => a.AccountName == "مدیر");
 
@@ -188,7 +188,7 @@ namespace DataAccessLayer.Repository
                 fundAccount.IsDelete = false;
             else
             {
-                fundAccount = new BusinessEntity.Financial_Operations.Account
+                fundAccount = new BusinessEntity.Invoices.Account
                 {
                     AccountName = "مدیر",
                     AccountType = "CashBox",
@@ -198,7 +198,7 @@ namespace DataAccessLayer.Repository
                 _db.Add(fundAccount);
             }
 
-            var peopleAccount = await _db.Set<BusinessEntity.Financial_Operations.Account>()
+            var peopleAccount = await _db.Set<BusinessEntity.Invoices.Account>()
                 .IgnoreQueryFilters()
                 .FirstOrDefaultAsync(a => a.AccountName == "مشتری پیش فرض");
 
@@ -206,7 +206,7 @@ namespace DataAccessLayer.Repository
                 peopleAccount.IsDelete = false;
             else
             {
-                peopleAccount = new BusinessEntity.Financial_Operations.Account
+                peopleAccount = new BusinessEntity.Invoices.Account
                 {
                     AccountName = "مشتری پیش فرض",
                     AccountType = "People",

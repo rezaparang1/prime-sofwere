@@ -17,6 +17,6 @@ namespace BusinessLogicLayer.Repository
         public decimal UnitConversionFactor { get; set; }
 
         public List<string> Barcodes { get; set; } = new List<string>();
-        public List<PriceDto> Prices { get; set; } = new List<PriceDto>();
+        public List<BusinessEntity.PriceDto> Prices { get; set; } = new List<BusinessEntity.PriceDto>();
     }
 }

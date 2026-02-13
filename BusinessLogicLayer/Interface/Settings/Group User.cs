@@ -1,17 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using DataAccessLayer;
+using BusinessEntity.Settings;
 
 namespace BusinessLogicLayer.Interface.Settings
 {
     public interface IGroupUserService
     {
-        Task<IEnumerable<BusinessEntity.Settings.Group_User>> GetAll();
-        Task<BusinessEntity.Settings.Group_User?> GetById(int id);
-        Task<string> Create(int UserId ,BusinessEntity.Settings.Group_User Group_User);
-        Task<string> Update(int UserId , BusinessEntity.Settings.Group_User Group_User);
-        Task<string> Delete(int UserId , int id);
+        Task<IEnumerable<Group_User>> GetAll();
+        Task<Group_User?> GetById(int id);
+        Task<Result> Create(Group_User Group_User, int UserId);
+        Task<Result> Update(Group_User Group_User, int UserId);
+        Task<Result> Delete(int Id, int UserId);
     }
 }

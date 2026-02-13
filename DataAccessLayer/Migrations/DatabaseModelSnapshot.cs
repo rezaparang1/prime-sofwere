@@ -22,7 +22,7 @@ namespace DataAccessLayer.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("BusinessEntity.Bank.Bank_To_Bank", b =>
+            modelBuilder.Entity("BusinessEntity.Customer_Club.ClubDiscount", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -30,61 +30,438 @@ namespace DataAccessLayer.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<long>("Amount")
-                        .HasColumnType("bigint");
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
 
-                    b.Property<int>("BankAccountEndId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("BankAccountFirstId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("BankAccountIdEnd")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("BankEndId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("BankFirstId")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("Date")
+                    b.Property<DateTime>("EndDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                    b.Property<TimeSpan?>("EndTime")
+                        .HasColumnType("interval");
 
-                    b.Property<string>("IdSandEnd")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
 
-                    b.Property<string>("IdSandFirst")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
+                    b.Property<bool>("RefundToWallet")
+                        .HasColumnType("boolean");
 
-                    b.Property<int>("PeopleId")
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<TimeSpan?>("StartTime")
+                        .HasColumnType("interval");
+
+                    b.Property<int>("StoreId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Value")
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("BankAccountEndId");
-
-                    b.HasIndex("BankAccountFirstId");
-
-                    b.HasIndex("BankEndId");
-
-                    b.HasIndex("BankFirstId");
-
-                    b.HasIndex("PeopleId");
-
-                    b.ToTable("Bank_To_Bank");
+                    b.ToTable("ClubDiscount");
                 });
 
-            modelBuilder.Entity("BusinessEntity.Bank.Definition_Bank", b =>
+            modelBuilder.Entity("BusinessEntity.Customer_Club.ClubDiscountProduct", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ClubDiscountId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ClubPrice")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("OriginalPrice")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClubDiscountId");
+
+                    b.HasIndex("ProductId");
+
+                    b.ToTable("ClubDiscountProduct");
+                });
+
+            modelBuilder.Entity("BusinessEntity.Customer_Club.Customer", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Barcode")
+                        .HasColumnType("text");
+
+                    b.Property<int>("CurrentPoints")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("CustomerLevelId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<string>("FirstName")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsClubMember")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("LastName")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime?>("LastPurchaseDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Mobile")
+                        .IsRequired()
+                        .HasMaxLength(12)
+                        .HasColumnType("character varying(12)");
+
+                    b.Property<DateTime>("RegisterDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("TotalPoints")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("TotalPurchaseAmount")
+                        .HasColumnType("numeric");
+
+                    b.Property<int>("TotalPurchaseCount")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerLevelId");
+
+                    b.ToTable("Customer");
+                });
+
+            modelBuilder.Entity("BusinessEntity.Customer_Club.CustomerLevel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<int>("DiscountPercent")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<int?>("MaxPoints")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MinPoints")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("StoreId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("CustomerLevel");
+                });
+
+            modelBuilder.Entity("BusinessEntity.Customer_Club.CustomerLevelHistory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("CustomerLevelId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("FromDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("ToDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("CustomerLevelId");
+
+                    b.ToTable("CustomerLevelHistory");
+                });
+
+            modelBuilder.Entity("BusinessEntity.Customer_Club.PointTransaction", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("ExpireDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("InvoiceId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Points")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("TransactionDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("InvoiceId");
+
+                    b.ToTable("PointTransaction");
+                });
+
+            modelBuilder.Entity("BusinessEntity.Customer_Club.PublicDiscount", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<TimeSpan>("EndTime")
+                        .HasColumnType("interval");
+
+                    b.Property<bool>("Friday")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsRecurring")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("Monday")
+                        .HasColumnType("boolean");
+
+                    b.Property<int?>("RecurringDays")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("Saturday")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<TimeSpan>("StartTime")
+                        .HasColumnType("interval");
+
+                    b.Property<int>("StoreId")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("Sunday")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("Thursday")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("Tuesday")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Value")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("Wednesday")
+                        .HasColumnType("boolean");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PublicDiscount");
+                });
+
+            modelBuilder.Entity("BusinessEntity.Customer_Club.PublicDiscountProduct", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("DiscountedPrice")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("OriginalPrice")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("PublicDiscountId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("PublicDiscountId");
+
+                    b.ToTable("PublicDiscountProduct");
+                });
+
+            modelBuilder.Entity("BusinessEntity.Customer_Club.Wallet", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Balance")
+                        .HasColumnType("numeric");
+
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("LastUpdate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerId")
+                        .IsUnique();
+
+                    b.ToTable("Wallet");
+                });
+
+            modelBuilder.Entity("BusinessEntity.Customer_Club.WalletTransaction", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("numeric");
+
+                    b.Property<int?>("ClubDiscountId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<int?>("InvoiceId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("TransactionDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("WalletId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClubDiscountId");
+
+                    b.HasIndex("InvoiceId");
+
+                    b.HasIndex("WalletId");
+
+                    b.ToTable("WalletTransaction");
+                });
+
+            modelBuilder.Entity("BusinessEntity.Fund.Cash_Register_To_The_User", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("FundId")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("InitialAmount")
+                        .HasColumnType("bigint");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FundId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Cash_Register_To_The_User");
+                });
+
+            modelBuilder.Entity("BusinessEntity.Fund.Definition_Bank", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -106,7 +483,7 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("definition_bank", (string)null);
                 });
 
-            modelBuilder.Entity("BusinessEntity.Bank.Definition_Bank_Account", b =>
+            modelBuilder.Entity("BusinessEntity.Fund.Definition_Bank_Account", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -161,6 +538,9 @@ namespace DataAccessLayer.Migrations
                     b.Property<long>("Inventory")
                         .HasColumnType("bigint");
 
+                    b.Property<bool>("IsDelete")
+                        .HasColumnType("boolean");
+
                     b.Property<int>("NegativeBalancePolicy")
                         .HasColumnType("integer");
 
@@ -183,209 +563,6 @@ namespace DataAccessLayer.Migrations
                     b.HasIndex("BankId");
 
                     b.ToTable("definition_bank_account", (string)null);
-                });
-
-            modelBuilder.Entity("BusinessEntity.Bank.Pay_To_Bank", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<long>("Amount")
-                        .HasColumnType("bigint");
-
-                    b.Property<int>("BankAccountId")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("BankAccuntId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("BankId")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("Date")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<int>("FundId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("IdSand")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<int>("PeopleId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("BankAccuntId");
-
-                    b.HasIndex("BankId");
-
-                    b.HasIndex("FundId");
-
-                    b.HasIndex("PeopleId");
-
-                    b.ToTable("Pay_To_Bank");
-                });
-
-            modelBuilder.Entity("BusinessEntity.Customer_Club.Customer", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("Britday")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Family")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Phone")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<int>("PriceLevelId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("PriceLevelsId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("Score")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("PriceLevelsId");
-
-                    b.ToTable("Customer");
-                });
-
-            modelBuilder.Entity("BusinessEntity.Financial_Operations.Account", b =>
-                {
-                    b.Property<int>("AccountId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("AccountId"));
-
-                    b.Property<string>("AccountName")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("AccountType")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<decimal>("Balance")
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<bool>("IsDelete")
-                        .HasColumnType("boolean");
-
-                    b.HasKey("AccountId");
-
-                    b.HasIndex("AccountName")
-                        .IsUnique();
-
-                    b.ToTable("Account");
-                });
-
-            modelBuilder.Entity("BusinessEntity.Financial_Operations.Transaction", b =>
-                {
-                    b.Property<int>("TransactionId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("TransactionId"));
-
-                    b.Property<int>("AccountId")
-                        .HasColumnType("integer");
-
-                    b.Property<decimal>("Amount")
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<DateTime>("Date")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("PaymentMethod")
-                        .HasColumnType("text");
-
-                    b.Property<int?>("RelatedAccountId")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("RelatedDocumentId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("RelatedDocumentType")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<int?>("WorkShiftId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("TransactionId");
-
-                    b.HasIndex("AccountId");
-
-                    b.HasIndex("WorkShiftId");
-
-                    b.ToTable("Transaction");
-                });
-
-            modelBuilder.Entity("BusinessEntity.Fund.Cash_Register_To_The_User", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("Date")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("FundId")
-                        .HasColumnType("integer");
-
-                    b.Property<long>("InitialAmount")
-                        .HasColumnType("bigint");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("FundId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("Cash_Register_To_The_User");
                 });
 
             modelBuilder.Entity("BusinessEntity.Fund.Fund", b =>
@@ -464,6 +641,36 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("Work_Shift");
                 });
 
+            modelBuilder.Entity("BusinessEntity.Invoices.Account", b =>
+                {
+                    b.Property<int>("AccountId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("AccountId"));
+
+                    b.Property<string>("AccountName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("AccountType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<decimal>("Balance")
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<bool>("IsDelete")
+                        .HasColumnType("boolean");
+
+                    b.HasKey("AccountId");
+
+                    b.HasIndex("AccountName")
+                        .IsUnique();
+
+                    b.ToTable("Account");
+                });
+
             modelBuilder.Entity("BusinessEntity.Invoices.Invoices", b =>
                 {
                     b.Property<int>("Id")
@@ -472,18 +679,33 @@ namespace DataAccessLayer.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<int>("ClubDiscountAll")
+                        .HasColumnType("integer");
+
                     b.Property<int>("CustomerId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("CustomerLevelId")
                         .HasColumnType("integer");
 
                     b.Property<DateTime>("Date")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int>("EarnedPoints")
+                        .HasColumnType("integer");
+
                     b.Property<string>("InvoiceNumber")
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<bool>("IsClubDiscountRefunded")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("IsUpdate")
                         .HasColumnType("boolean");
+
+                    b.Property<int>("LevelDiscountAmount")
+                        .HasColumnType("integer");
 
                     b.Property<int>("NumberofAllItems")
                         .HasColumnType("integer");
@@ -503,12 +725,17 @@ namespace DataAccessLayer.Migrations
                     b.Property<int>("TypeInvoices")
                         .HasColumnType("integer");
 
+                    b.Property<int>("UsedWalletAmount")
+                        .HasColumnType("integer");
+
                     b.Property<int>("UserId")
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
 
                     b.HasIndex("CustomerId");
+
+                    b.HasIndex("CustomerLevelId");
 
                     b.HasIndex("PeopleId");
 
@@ -532,6 +759,12 @@ namespace DataAccessLayer.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<int>("ClubDiscount")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("ClubDiscountId")
+                        .HasColumnType("integer");
+
                     b.Property<int>("InvoicesId")
                         .HasColumnType("integer");
 
@@ -546,19 +779,79 @@ namespace DataAccessLayer.Migrations
                     b.Property<int>("OFF")
                         .HasColumnType("integer");
 
+                    b.Property<int>("OriginalPrice")
+                        .HasColumnType("integer");
+
                     b.Property<int>("Price")
                         .HasColumnType("integer");
 
                     b.Property<int>("ProductId")
                         .HasColumnType("integer");
 
+                    b.Property<int?>("PublicDiscountId")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("ClubDiscountId");
 
                     b.HasIndex("InvoicesId");
 
                     b.HasIndex("ProductId");
 
+                    b.HasIndex("PublicDiscountId");
+
                     b.ToTable("Invoices_Item");
+                });
+
+            modelBuilder.Entity("BusinessEntity.Invoices.Transaction", b =>
+                {
+                    b.Property<int>("TransactionId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("TransactionId"));
+
+                    b.Property<int>("AccountId")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("PaymentMethod")
+                        .HasColumnType("text");
+
+                    b.Property<int?>("RelatedAccountId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("RelatedDocumentId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("RelatedDocumentType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int?>("WorkShiftId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("TransactionId");
+
+                    b.HasIndex("AccountId");
+
+                    b.HasIndex("WorkShiftId");
+
+                    b.ToTable("Transaction");
                 });
 
             modelBuilder.Entity("BusinessEntity.People.Group_People", b =>
@@ -754,6 +1047,9 @@ namespace DataAccessLayer.Migrations
                     b.Property<decimal>("BuyPrice")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("text");
@@ -772,6 +1068,9 @@ namespace DataAccessLayer.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<bool>("IsBarcode")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDelete")
                         .HasColumnType("boolean");
 
                     b.Property<bool>("IsIsButton")
@@ -1316,127 +1615,121 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("User");
                 });
 
-            modelBuilder.Entity("BusinessEntity.Bank.Bank_To_Bank", b =>
+            modelBuilder.Entity("BusinessEntity.Customer_Club.ClubDiscountProduct", b =>
                 {
-                    b.HasOne("BusinessEntity.Bank.Definition_Bank_Account", "BankAccountEnd")
-                        .WithMany()
-                        .HasForeignKey("BankAccountEndId")
+                    b.HasOne("BusinessEntity.Customer_Club.ClubDiscount", "ClubDiscount")
+                        .WithMany("Products")
+                        .HasForeignKey("ClubDiscountId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("BusinessEntity.Bank.Definition_Bank_Account", "BankAccountFirst")
+                    b.HasOne("BusinessEntity.Product.Product", "Product")
                         .WithMany()
-                        .HasForeignKey("BankAccountFirstId")
+                        .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("BusinessEntity.Bank.Definition_Bank", "BankEnd")
-                        .WithMany()
-                        .HasForeignKey("BankEndId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                    b.Navigation("ClubDiscount");
 
-                    b.HasOne("BusinessEntity.Bank.Definition_Bank", "BankFirst")
-                        .WithMany()
-                        .HasForeignKey("BankFirstId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("BusinessEntity.People.People", "People")
-                        .WithMany()
-                        .HasForeignKey("PeopleId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("BankAccountEnd");
-
-                    b.Navigation("BankAccountFirst");
-
-                    b.Navigation("BankEnd");
-
-                    b.Navigation("BankFirst");
-
-                    b.Navigation("People");
-                });
-
-            modelBuilder.Entity("BusinessEntity.Bank.Definition_Bank_Account", b =>
-                {
-                    b.HasOne("BusinessEntity.Financial_Operations.Account", "Account")
-                        .WithMany()
-                        .HasForeignKey("AccountId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("BusinessEntity.Bank.Definition_Bank", "Bank")
-                        .WithMany("BankAccounts")
-                        .HasForeignKey("BankId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Account");
-
-                    b.Navigation("Bank");
-                });
-
-            modelBuilder.Entity("BusinessEntity.Bank.Pay_To_Bank", b =>
-                {
-                    b.HasOne("BusinessEntity.Bank.Definition_Bank_Account", "BankAccunt")
-                        .WithMany()
-                        .HasForeignKey("BankAccuntId");
-
-                    b.HasOne("BusinessEntity.Bank.Definition_Bank", "Bank")
-                        .WithMany()
-                        .HasForeignKey("BankId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("BusinessEntity.Fund.Fund", "Fund")
-                        .WithMany()
-                        .HasForeignKey("FundId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("BusinessEntity.People.People", "People")
-                        .WithMany()
-                        .HasForeignKey("PeopleId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Bank");
-
-                    b.Navigation("BankAccunt");
-
-                    b.Navigation("Fund");
-
-                    b.Navigation("People");
+                    b.Navigation("Product");
                 });
 
             modelBuilder.Entity("BusinessEntity.Customer_Club.Customer", b =>
                 {
-                    b.HasOne("BusinessEntity.Product.PriceLevels", "PriceLevels")
-                        .WithMany()
-                        .HasForeignKey("PriceLevelsId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                    b.HasOne("BusinessEntity.Customer_Club.CustomerLevel", "CustomerLevel")
+                        .WithMany("Customers")
+                        .HasForeignKey("CustomerLevelId");
 
-                    b.Navigation("PriceLevels");
+                    b.Navigation("CustomerLevel");
                 });
 
-            modelBuilder.Entity("BusinessEntity.Financial_Operations.Transaction", b =>
+            modelBuilder.Entity("BusinessEntity.Customer_Club.CustomerLevelHistory", b =>
                 {
-                    b.HasOne("BusinessEntity.Financial_Operations.Account", "Account")
-                        .WithMany("Transactions")
-                        .HasForeignKey("AccountId")
+                    b.HasOne("BusinessEntity.Customer_Club.Customer", "Customer")
+                        .WithMany("LevelHistories")
+                        .HasForeignKey("CustomerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("BusinessEntity.Fund.Work_Shift", "WorkShift")
+                    b.HasOne("BusinessEntity.Customer_Club.CustomerLevel", "CustomerLevel")
+                        .WithMany("LevelHistories")
+                        .HasForeignKey("CustomerLevelId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("CustomerLevel");
+                });
+
+            modelBuilder.Entity("BusinessEntity.Customer_Club.PointTransaction", b =>
+                {
+                    b.HasOne("BusinessEntity.Customer_Club.Customer", "Customer")
+                        .WithMany("PointTransactions")
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BusinessEntity.Invoices.Invoices", "Invoice")
                         .WithMany()
-                        .HasForeignKey("WorkShiftId");
+                        .HasForeignKey("InvoiceId");
 
-                    b.Navigation("Account");
+                    b.Navigation("Customer");
 
-                    b.Navigation("WorkShift");
+                    b.Navigation("Invoice");
+                });
+
+            modelBuilder.Entity("BusinessEntity.Customer_Club.PublicDiscountProduct", b =>
+                {
+                    b.HasOne("BusinessEntity.Product.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BusinessEntity.Customer_Club.PublicDiscount", "PublicDiscount")
+                        .WithMany("Products")
+                        .HasForeignKey("PublicDiscountId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+
+                    b.Navigation("PublicDiscount");
+                });
+
+            modelBuilder.Entity("BusinessEntity.Customer_Club.Wallet", b =>
+                {
+                    b.HasOne("BusinessEntity.Customer_Club.Customer", "Customer")
+                        .WithOne("Wallet")
+                        .HasForeignKey("BusinessEntity.Customer_Club.Wallet", "CustomerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Customer");
+                });
+
+            modelBuilder.Entity("BusinessEntity.Customer_Club.WalletTransaction", b =>
+                {
+                    b.HasOne("BusinessEntity.Customer_Club.ClubDiscount", "ClubDiscount")
+                        .WithMany()
+                        .HasForeignKey("ClubDiscountId");
+
+                    b.HasOne("BusinessEntity.Invoices.Invoices", "Invoice")
+                        .WithMany()
+                        .HasForeignKey("InvoiceId");
+
+                    b.HasOne("BusinessEntity.Customer_Club.Wallet", "Wallet")
+                        .WithMany("Transactions")
+                        .HasForeignKey("WalletId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ClubDiscount");
+
+                    b.Navigation("Invoice");
+
+                    b.Navigation("Wallet");
                 });
 
             modelBuilder.Entity("BusinessEntity.Fund.Cash_Register_To_The_User", b =>
@@ -1458,9 +1751,28 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("BusinessEntity.Fund.Definition_Bank_Account", b =>
+                {
+                    b.HasOne("BusinessEntity.Invoices.Account", "Account")
+                        .WithMany()
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BusinessEntity.Fund.Definition_Bank", "Bank")
+                        .WithMany("BankAccounts")
+                        .HasForeignKey("BankId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Account");
+
+                    b.Navigation("Bank");
+                });
+
             modelBuilder.Entity("BusinessEntity.Fund.Fund", b =>
                 {
-                    b.HasOne("BusinessEntity.Financial_Operations.Account", "Account")
+                    b.HasOne("BusinessEntity.Invoices.Account", "Account")
                         .WithMany()
                         .HasForeignKey("AccountId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1488,6 +1800,10 @@ namespace DataAccessLayer.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("BusinessEntity.Customer_Club.CustomerLevel", "CustomerLevel")
+                        .WithMany()
+                        .HasForeignKey("CustomerLevelId");
+
                     b.HasOne("BusinessEntity.People.People", "People")
                         .WithMany("Invoices")
                         .HasForeignKey("PeopleId")
@@ -1502,6 +1818,8 @@ namespace DataAccessLayer.Migrations
 
                     b.Navigation("Customer");
 
+                    b.Navigation("CustomerLevel");
+
                     b.Navigation("People");
 
                     b.Navigation("User");
@@ -1509,6 +1827,10 @@ namespace DataAccessLayer.Migrations
 
             modelBuilder.Entity("BusinessEntity.Invoices.Invoices_Item", b =>
                 {
+                    b.HasOne("BusinessEntity.Customer_Club.ClubDiscount", "ClubDiscountEntity")
+                        .WithMany()
+                        .HasForeignKey("ClubDiscountId");
+
                     b.HasOne("BusinessEntity.Invoices.Invoices", "Invoices")
                         .WithMany("Invoices_Item")
                         .HasForeignKey("InvoicesId")
@@ -1521,14 +1843,39 @@ namespace DataAccessLayer.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("BusinessEntity.Customer_Club.PublicDiscount", "PublicDiscount")
+                        .WithMany()
+                        .HasForeignKey("PublicDiscountId");
+
+                    b.Navigation("ClubDiscountEntity");
+
                     b.Navigation("Invoices");
 
                     b.Navigation("Product");
+
+                    b.Navigation("PublicDiscount");
+                });
+
+            modelBuilder.Entity("BusinessEntity.Invoices.Transaction", b =>
+                {
+                    b.HasOne("BusinessEntity.Invoices.Account", "Account")
+                        .WithMany("Transactions")
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BusinessEntity.Fund.Work_Shift", "WorkShift")
+                        .WithMany()
+                        .HasForeignKey("WorkShiftId");
+
+                    b.Navigation("Account");
+
+                    b.Navigation("WorkShift");
                 });
 
             modelBuilder.Entity("BusinessEntity.People.People", b =>
                 {
-                    b.HasOne("BusinessEntity.Financial_Operations.Account", "Account")
+                    b.HasOne("BusinessEntity.Invoices.Account", "Account")
                         .WithMany()
                         .HasForeignKey("AccountId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1754,17 +2101,35 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("People");
                 });
 
-            modelBuilder.Entity("BusinessEntity.Bank.Definition_Bank", b =>
+            modelBuilder.Entity("BusinessEntity.Customer_Club.ClubDiscount", b =>
                 {
-                    b.Navigation("BankAccounts");
+                    b.Navigation("Products");
                 });
 
             modelBuilder.Entity("BusinessEntity.Customer_Club.Customer", b =>
                 {
                     b.Navigation("Invoices");
+
+                    b.Navigation("LevelHistories");
+
+                    b.Navigation("PointTransactions");
+
+                    b.Navigation("Wallet");
                 });
 
-            modelBuilder.Entity("BusinessEntity.Financial_Operations.Account", b =>
+            modelBuilder.Entity("BusinessEntity.Customer_Club.CustomerLevel", b =>
+                {
+                    b.Navigation("Customers");
+
+                    b.Navigation("LevelHistories");
+                });
+
+            modelBuilder.Entity("BusinessEntity.Customer_Club.PublicDiscount", b =>
+                {
+                    b.Navigation("Products");
+                });
+
+            modelBuilder.Entity("BusinessEntity.Customer_Club.Wallet", b =>
                 {
                     b.Navigation("Transactions");
                 });
@@ -1774,9 +2139,19 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("WorkShifts");
                 });
 
+            modelBuilder.Entity("BusinessEntity.Fund.Definition_Bank", b =>
+                {
+                    b.Navigation("BankAccounts");
+                });
+
             modelBuilder.Entity("BusinessEntity.Fund.Fund", b =>
                 {
                     b.Navigation("CashRegisters");
+                });
+
+            modelBuilder.Entity("BusinessEntity.Invoices.Account", b =>
+                {
+                    b.Navigation("Transactions");
                 });
 
             modelBuilder.Entity("BusinessEntity.Invoices.Invoices", b =>

@@ -1,17 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using DataAccessLayer;
+using BusinessEntity.Product;
 
 namespace BusinessLogicLayer.Interface.Producr
 {
     public interface IPriceLevelsService
     {
-        Task<IEnumerable<BusinessEntity.Product.PriceLevels>> GetAll();
-        Task<BusinessEntity.Product.PriceLevels?> GetById(int id);
-        Task<string> Create(int UserId, BusinessEntity.Product.PriceLevels PriceLevels);
-        Task<string> Update(int UserId, BusinessEntity.Product.PriceLevels PriceLevels);
-        Task<string> Delete(int UserId, int id);
+        Task<IEnumerable<PriceLevels>> GetAll();
+        Task<PriceLevels?> GetById(int id);
+        Task<Result> Create(PriceLevels PriceLevels, int UserId);
+        Task<Result> Update(PriceLevels PriceLevels, int UserId);
+        Task<Result> Delete(int Id, int UserId);
     }
 }

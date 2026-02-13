@@ -12,21 +12,19 @@ namespace BusinessLogicLayer.ValidatData.People
         public PeopleValidator()
         {
             RuleFor(p => p.FirstName)
-                .NotEmpty().WithMessage("نام  شخص نمیتواند خالی باشد مجددا تلاش کنید .")
-                
+                .NotEmpty().WithMessage("نام  شخص نمیتواند خالی باشد مجددا تلاش کنید .")   
                 .MaximumLength(50).WithMessage("نام شخص نباید بیش از 50 کاراکتر باشد.");
             RuleFor(p => p.LastName)
-                .NotEmpty().WithMessage("نام خانوادگی  شخص نمیتواند خالی باشد مجددا تلاش کنید .")
-                
+                .NotEmpty().WithMessage("نام خانوادگی  شخص نمیتواند خالی باشد مجددا تلاش کنید .")          
                 .MaximumLength(50).WithMessage("نام خانوادگی شخص نباید بیش از 50 کاراکتر باشد.");
             RuleFor(p => p.Phone)
-                .Must(name => !string.IsNullOrWhiteSpace(name)).WithMessage("شماره تماس نباید فقط فاصله باشد.")
+                .NotEmpty().WithMessage("شماره  شخص نمیتواند خالی باشد مجددا تلاش کنید .")
                 .MaximumLength(12).WithMessage("شماره تماس شخص نباید بیش از 12 کاراکتر باشد.");
             RuleFor(p => p.Description)
-                .Must(name => !string.IsNullOrWhiteSpace(name)).WithMessage("نام نباید فقط فاصله باشد.")
+               // .Must(description => !string.IsNullOrWhiteSpace(description)).WithMessage("نام نباید فقط فاصله باشد.")
                 .MaximumLength(200).WithMessage("توضیحات شخص نباید بیش از 200 کاراکتر باشد.");
             RuleFor(p => p.Address)
-                .Must(name => !string.IsNullOrWhiteSpace(name)).WithMessage("نام نباید فقط فاصله باشد.")
+              //  .Must(address => !string.IsNullOrWhiteSpace(address)).WithMessage("نام نباید فقط فاصله باشد.")
                 .MaximumLength(200).WithMessage("آدرس شخص نباید بیش از 200 کاراکتر باشد.");
         }
     }

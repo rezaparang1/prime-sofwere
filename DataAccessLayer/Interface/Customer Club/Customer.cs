@@ -1,4 +1,5 @@
-﻿using BusinessEntity.Fund;
+﻿using BusinessEntity.Customer_Club;
+using BusinessEntity.Fund;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,13 +8,21 @@ using System.Threading.Tasks;
 
 namespace DataAccessLayer.Interface.Customer_Club
 {
-    public interface ICustomerRepository
+    public interface ICustomerRepository : IRepository<Customer>
     {
-        Task<List<BusinessEntity.Customer_Club.Customer>> Search(string? name = null);
-        Task<IEnumerable<BusinessEntity.Customer_Club.Customer>> GetAll();
-        Task<BusinessEntity.Customer_Club.Customer?> GetById(int id);
-        Task<string> Create(int UserId, BusinessEntity.Customer_Club.Customer Customer);
-        Task<string> Update(int UserId, BusinessEntity.Customer_Club.Customer Customer);
-        Task<string> Delete(int UserId, int id);
+        Task<Customer?> GetByBarcodeAsync(string barcode);
+        Task<Customer?> GetByMobileAsync(string mobile);
+        Task<Customer?> GetByEmailAsync(string email);
+        Task<Customer?> GetWithDetailsAsync(int id);
+        Task<IEnumerable<Customer>> GetCustomersByLevelAsync(int levelId);
+        Task<IEnumerable<Customer>> GetCustomersByStoreAsync(int storeId);
+        Task<IEnumerable<Customer>> GetActiveCustomersAsync();
+        Task<IEnumerable<Customer>> GetClubMembersAsync();
+        Task<decimal> GetCustomerTotalPurchaseAsync(int customerId);
+        Task<int> GetCustomerPurchaseCountAsync(int customerId);
+        Task<int> GetCustomerPointsAsync(int customerId);
+        Task<bool> IsMobileExistsAsync(string mobile, int? excludeCustomerId = null);
+        Task<bool> IsEmailExistsAsync(string email, int? excludeCustomerId = null);
+        Task<bool> IsBarcodeExistsAsync(string barcode, int? excludeCustomerId = null);
     }
 }

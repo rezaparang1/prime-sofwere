@@ -1,6 +1,8 @@
 ﻿using BusinessEntity;
 using BusinessLogicLayer;
-using BusinessLogicLayer.Repository.Bank;
+using BusinessLogicLayer.Interface.People;
+using BusinessLogicLayer.Interface.Settings;
+using BusinessLogicLayer.Repository.Fund;
 using Microsoft.AspNetCore.Authentication.OAuth.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -15,106 +17,72 @@ namespace Prime_Software.Controllers.People
     public class Group_People : ControllerBase
     {
         private readonly ICurrentUserService _currentUser;
-        private readonly BusinessLogicLayer.Interface.People.IGroupPeopleService _GroupPeopleService;
-        private readonly ILogger<Group_People> _logger;
-        public Group_People(ICurrentUserService currentUser, BusinessLogicLayer.Interface.People.IGroupPeopleService GroupPeopleService, ILogger<Group_People> logger)
+        private readonly IGroupPeopleService _service;
+
+        public Group_People(
+            ICurrentUserService currentUser,
+            IGroupPeopleService service)
         {
             _currentUser = currentUser;
-            _GroupPeopleService = GroupPeopleService;
-            _logger = logger;
+            _service = service;
         }
-        //******READ******
+
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            _logger.LogInformation("Request to receive all Group_People");
-            var getall = await _GroupPeopleService.GetAll();
-            _logger.LogInformation("{Count} items received", getall.Count());
-            return Ok(getall);
+            var result = await _service.GetAll();
+            return Ok(result);
         }
+
         [HttpGet("{id}")]
-        public async Task<ActionResult<BusinessEntity.People.Group_People>> GetById(int id)
+        public async Task<IActionResult> GetById(int id)
         {
-            _logger.LogInformation("Request to receive Group_People with ID: {Id}", id);
-            var getbyid = await _GroupPeopleService.GetById(id);
-            if (getbyid == null)
-            {
-                _logger.LogWarning("Group_People with ID {Id} not found.", id);
+            var result = await _service.GetById(id);
+            if (result == null)
                 return NotFound();
-            }
-            return Ok(getbyid);
+            return Ok(result);
         }
-        //******CRUD*****
+
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] BusinessEntity.People.Group_People Group_People)
+        public async Task<IActionResult> Create([FromBody] BusinessEntity.People.Group_People async)
         {
             var userId = _currentUser.UserId!.Value;
-            _logger.LogInformation("Request to create a new Group_People: {@Group_People}", Group_People);
+            var result = await _service.Create(async, userId);
 
-            if (!ModelState.IsValid)
-            {
-                _logger.LogWarning("The creation request was invalid: {Errors}", ModelState);
-                return BadRequest(ModelState);
-            }
+            if (!result.IsSuccess)
+                return BadRequest(result.Message);
 
-            try
-            {
-                var result = await _GroupPeopleService.Create(userId, Group_People);
-                _logger.LogInformation("Successful creation: {Message}", result);
-                return CreatedAtAction(nameof(GetById), new { id = Group_People.Id }, result);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error creating Group_People: {@Group_People}", Group_People);
-                return BadRequest(ex.Message);
-            }
+            return CreatedAtAction(nameof(GetById), new { id = async.Id }, result.Message);
         }
+
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, [FromBody] BusinessEntity.People.Group_People Group_People)
+        public async Task<IActionResult> Update(int id, [FromBody] BusinessEntity.People.Group_People async)
         {
+            if (id != async.Id)
+                return BadRequest("شناسه ارسال شده با مقدار ذخیره شده مطابقت ندارد.");
+
             var userId = _currentUser.UserId!.Value;
-            _logger.LogInformation("Request update for ID: {Id}, Data: {@Group_People}", id, Group_People);
+            var result = await _service.Update(async, userId);
 
-            if (id != Group_People.Id)
-            {
-                _logger.LogWarning("The submitted ID does not match the ID in the body.");
-                return BadRequest("شناسه ثبت شده با مقدار ارسال شده مطابقت ندارد.");
-            }
+            if (!result.IsSuccess)
+                return BadRequest(result.Message);
 
-            try
-            {
-                var result = await _GroupPeopleService.Update(userId, Group_People);
-                _logger.LogInformation("Successful update: {Message}", result);
-                return CreatedAtAction(nameof(GetById), new { id = Group_People.Id }, result);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error updating Group_People: {@Group_People}", Group_People);
-                return BadRequest(ex.Message);
-            }
+            return Ok(result.Message);
         }
+
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
             var userId = _currentUser.UserId!.Value;
-            _logger.LogInformation("Request to delete Group_People with ID: {Id}", id);
-            try
-            {
-                var result = await _GroupPeopleService.Delete(userId,id);
-                if (result.Contains("مطابقت ندارد"))
-                {
-                    _logger.LogWarning("Group_People with ID {Id} not found for deletion", id);
-                    return NotFound(result);
-                }
+            var result = await _service.Delete(id, userId);
 
-                _logger.LogInformation("Successfully deleted Group_People with ID {Id}", id);
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error deleting Group_People  with ID: {Id}", id);
-                return BadRequest(ex.Message);
-            }
+            if (!result.IsSuccess && result.Message.Contains("یافت نشد"))
+                return NotFound(result.Message);
+
+            if (!result.IsSuccess)
+                return BadRequest(result.Message);
+
+            return Ok(result.Message);
         }
     }
 }

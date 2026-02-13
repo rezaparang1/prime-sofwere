@@ -1,6 +1,7 @@
 ﻿using BusinessEntity;
 using BusinessLogicLayer;
-using BusinessLogicLayer.Repository.Bank;
+using BusinessLogicLayer.Interface.Producr;
+using BusinessLogicLayer.Repository.Fund;
 using Microsoft.AspNetCore.Authentication.OAuth.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,123 +13,204 @@ namespace Prime_Software.Controllers.Peoduct
     [Route("api/Product/Storeroom_Product")]
     [ApiController]
     [Authorize]
-    public class Storeroom_Product : ControllerBase
+    public class StoreroomProductController : ControllerBase
     {
         private readonly ICurrentUserService _currentUser;
-        private readonly BusinessLogicLayer.Interface.Producr.IStoreroomProductService _StoreroomProductService;
-        private readonly ILogger<Storeroom_Product> _logger;
-        public Storeroom_Product(ICurrentUserService currentUser, BusinessLogicLayer.Interface.Producr.IStoreroomProductService StoreroomProductService, ILogger<Storeroom_Product> logger)
+        private readonly IStoreroomProductService _storeroomService;
+
+        public StoreroomProductController(
+            ICurrentUserService currentUser,
+            IStoreroomProductService storeroomService)
         {
             _currentUser = currentUser;
-            _StoreroomProductService = StoreroomProductService;
-            _logger = logger;
+            _storeroomService = storeroomService;
         }
-        //******SEARCH****
-        [HttpGet("search")]
-        public async Task<IActionResult> SearchAsync([FromQuery] string? Name = null , [FromQuery] string? Description = null, [FromQuery] int? SectionId = null)
-        {
-            _logger.LogInformation("Search request for name: {Name}{Description}{SectionId}", Name , Description , SectionId);
-            try
-            {
-                var search = await _StoreroomProductService.Search(Name,Description,SectionId);
-                _logger.LogInformation("{Count} results found.", search.Count);
-                return Ok(search);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in search operation for name: {Name}{Description}{SectionId}", Name,Description,SectionId);
-                return BadRequest(new { message = ex.Message });
-            }
-        }
-        //******READ******
+
+        // GET: api/StoreroomProduct
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            _logger.LogInformation("Request to receive all StoreroomProduct");
-            var getall = await _StoreroomProductService.GetAll();
-            _logger.LogInformation("{Count} items received", getall.Count());
-            return Ok(getall);
-        }
-        [HttpGet("{id}")]
-        public async Task<ActionResult<BusinessEntity.Product.Storeroom_Product>> GetById(int id)
-        {
-            _logger.LogInformation("Request to receive StoreroomProduct with ID: {Id}", id);
-            var getbyid = await _StoreroomProductService.GetById(id);
-            if (getbyid == null)
-            {
-                _logger.LogWarning("StoreroomProduct with ID {Id} not found.", id);
-                return NotFound();
-            }
-            return Ok(getbyid);
-        }
-        //******CRUD*****
-        [HttpPost]
-        public async Task<IActionResult> Create([FromBody] BusinessEntity.Product.Storeroom_Product StoreroomProduct)
-        {
-            var userId = _currentUser.UserId!.Value;
-            _logger.LogInformation("Request to create a new StoreroomProduct: {@StoreroomProduct}", StoreroomProduct);
-
-            if (!ModelState.IsValid)
-            {
-                _logger.LogWarning("The creation request was invalid: {Errors}", ModelState);
-                return BadRequest(ModelState);
-            }
             try
             {
-                var result = await _StoreroomProductService.Create(userId, StoreroomProduct);
-                _logger.LogInformation("Successful creation: {Message}", result);
-                return CreatedAtAction(nameof(GetById), new { id = StoreroomProduct.Id }, result);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error creating StoreroomProduct: {@StoreroomProduct}", StoreroomProduct);
-                return BadRequest(ex.Message);
-            }
-        }
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, [FromBody] BusinessEntity.Product.Storeroom_Product StoreroomProduct)
-        {
-            var userId = _currentUser.UserId!.Value;
-            _logger.LogInformation("Request update for ID: {Id}, Data: {@StoreroomProduct}", id, StoreroomProduct);
-
-            if (id != StoreroomProduct.Id)
-            {
-                _logger.LogWarning("The submitted ID does not match the ID in the body.");
-                return BadRequest("شناسه ثبت شده با مقدار ارسال شده مطابقت ندارد.");
-            }
-            try
-            {
-                var result = await _StoreroomProductService.Update(userId, StoreroomProduct);
-                _logger.LogInformation("Successful update: {Message}", result);
-                return CreatedAtAction(nameof(GetById), new { id = StoreroomProduct.Id }, result);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error updating StoreroomProduct: {@StoreroomProduct}", StoreroomProduct);
-                return BadRequest(ex.Message);
-            }
-        }
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(int id)
-        {
-            var userId = _currentUser.UserId!.Value;
-            _logger.LogInformation("Request to delete StoreroomProduct with ID: {Id}", id);
-            try
-            {
-                var result = await _StoreroomProductService.Delete(userId, id);
-                if (result.Contains("شناسه"))
-                {
-                    _logger.LogWarning("StoreroomProduct with ID {Id} not found for deletion", id);
-                    return NotFound(result);
-                }
-
-                _logger.LogInformation("Successfully deleted StoreroomProduct with ID {Id}", id);
+                var result = await _storeroomService.GetAll();
                 return Ok(result);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error deleting StoreroomProduct with ID: {Id}", id);
-                return BadRequest(ex.Message);
+                return StatusCode(500, new
+                {
+                    message = "خطای داخلی سرور",
+                    error = ex.Message
+                });
+            }
+        }
+
+        // GET: api/StoreroomProduct/5
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetById(int id)
+        {
+            try
+            {
+                var result = await _storeroomService.GetById(id);
+                if (result == null)
+                    return NotFound(new { message = "انبار یافت نشد." });
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    message = "خطای داخلی سرور",
+                    error = ex.Message
+                });
+            }
+        }
+
+        // GET: api/StoreroomProduct/search
+        [HttpGet("search")]
+        public async Task<IActionResult> Search(
+            [FromQuery] string? name = null,
+            [FromQuery] int? sectionProductId = null,
+            [FromQuery] int? peopleId = null)
+        {
+            try
+            {
+                var result = await _storeroomService.Search(name, sectionProductId, peopleId);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    message = "خطای داخلی سرور",
+                    error = ex.Message
+                });
+            }
+        }
+
+        // POST: api/StoreroomProduct
+        [HttpPost]
+        public async Task<IActionResult> Create([FromBody] BusinessEntity.Product.Storeroom_Product storeroom)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                    return BadRequest(new
+                    {
+                        message = "داده‌های ارسالی معتبر نیستند.",
+                        errors = ModelState.Values
+                            .SelectMany(v => v.Errors)
+                            .Select(e => e.ErrorMessage)
+                    });
+
+                var userId = _currentUser.UserId ?? throw new UnauthorizedAccessException("کاربر شناسایی نشد.");
+                var result = await _storeroomService.Create(storeroom, userId);
+
+                if (!result.IsSuccess)
+                    return BadRequest(new { message = result.Message });
+
+                return CreatedAtAction(
+                    nameof(GetById),
+                    new { id = storeroom.Id },
+                    new
+                    {
+                        message = result.Message,
+                        storeroomId = storeroom.Id
+                    });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    message = "خطای داخلی سرور",
+                    error = ex.Message
+                });
+            }
+        }
+
+        // PUT: api/StoreroomProduct/5
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(int id, [FromBody] BusinessEntity.Product.Storeroom_Product storeroom)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                    return BadRequest(new
+                    {
+                        message = "داده‌های ارسالی معتبر نیستند.",
+                        errors = ModelState.Values
+                            .SelectMany(v => v.Errors)
+                            .Select(e => e.ErrorMessage)
+                    });
+
+                if (id != storeroom.Id)
+                    return BadRequest(new { message = "شناسه ارسال شده با شناسه انبار مطابقت ندارد." });
+
+                var userId = _currentUser.UserId ?? throw new UnauthorizedAccessException("کاربر شناسایی نشد.");
+                var result = await _storeroomService.Update(storeroom, userId);
+
+                if (!result.IsSuccess)
+                    return BadRequest(new { message = result.Message });
+
+                return Ok(new
+                {
+                    message = result.Message,
+                    storeroomId = storeroom.Id
+                });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    message = "خطای داخلی سرور",
+                    error = ex.Message
+                });
+            }
+        }
+
+        // DELETE: api/StoreroomProduct/5
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            try
+            {
+                var userId = _currentUser.UserId ?? throw new UnauthorizedAccessException("کاربر شناسایی نشد.");
+                var result = await _storeroomService.Delete(id, userId);
+
+                if (!result.IsSuccess)
+                {
+                    if (result.Message.Contains("یافت نشد"))
+                        return NotFound(new { message = result.Message });
+
+                    return BadRequest(new { message = result.Message });
+                }
+
+                return Ok(new
+                {
+                    message = result.Message,
+                    storeroomId = id
+                });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    message = "خطای داخلی سرور",
+                    error = ex.Message
+                });
             }
         }
     }

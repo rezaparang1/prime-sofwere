@@ -1,4 +1,8 @@
 ﻿using BusinessEntity.Settings;
+using BusinessLogicLayer.Interface;
+using BusinessLogicLayer.Interface.Settings;
+using DataAccessLayer;
+using DataAccessLayer.Interface.Settings;
 using FluentValidation;
 using Microsoft.Extensions.Logging;
 using System;
@@ -9,97 +13,172 @@ using System.Threading.Tasks;
 
 namespace BusinessLogicLayer.Repository.Settings
 {
-    public class UserService : Interface.Settings.IUserService
+    public class UserService : IUserService
     {
-        private readonly DataAccessLayer.Interface.Settings.IUserRepository _UserRepository;
+        private readonly IUserRepository _userRepository;
+        private readonly ILogService _logService;
+        private readonly Database _context;
         private readonly ILogger<UserService> _logger;
 
-        public UserService(DataAccessLayer.Interface.Settings.IUserRepository UserRepository, ILogger<UserService> logger)
+        public UserService(
+            IUserRepository userRepository,
+            ILogService logService,
+            Database context,
+            ILogger<UserService> logger)
         {
-            _UserRepository = UserRepository;
+            _userRepository = userRepository;
+            _logService = logService;
+            _context = context;
             _logger = logger;
         }
-        //*******READ*********
+
         public async Task<List<UserComboDto>> GetActiveUsersAsync()
         {
-            _logger.LogInformation("Request Fund GetInventoryDetails ");
-            var result = await _UserRepository.GetActiveUsersAsync();
-            _logger.LogInformation("{Count} results found", result.Count);
-            return result;
-            //return _repo.GetActiveUsersAsync();
+            return await _userRepository.GetActiveUsersAsync();
         }
-        public async Task<IEnumerable<BusinessEntity.Settings.User>> GetAll()
-        {
-            _logger.LogInformation("Request to receive all User");
-            var result = await _UserRepository.GetAll();
-            _logger.LogInformation("{Count} items received", result.Count());
-            return result;
-        }
-        public async Task<BusinessEntity.Settings.User?> GetById(int id)
-        {
-            _logger.LogInformation("Request to receive User with ID: {Id}", id);
-            var entity = await _UserRepository.GetById(id);
-            if (entity == null)
-                _logger.LogWarning("User with ID {Id} not found", id);
-            else
-                _logger.LogInformation("User with ID {Id} was successfully found", id);
 
-            return entity;
-        }
-        public async Task<BusinessEntity.Settings.User?> FindByUserNameAndPassword(string? UserName = null, string? Password = null)
+        public async Task<User?> FindByUserNameAndPassword(string? userName = null, string? password = null)
         {
-            _logger.LogInformation("Request to receive User with UserName , Password: {UserName}{Password}", UserName, Password);
-            var entity = await _UserRepository.FindByUserNameAndPassword(UserName, Password);
-            if (entity == null)
-                _logger.LogWarning("User with Async {UserName}{Password} not found", UserName, Password);
-            else
-                _logger.LogInformation("User with Async {UserName}{Password} was successfully found", UserName, Password);
-            return entity;
+            return await _userRepository.FindByUserNameAndPassword(userName, password);
         }
-        //*****CRUD**********
-        public async Task<string> Create(int UserId ,BusinessEntity.Settings.User User)
+
+        public async Task<IEnumerable<User>> GetAll()
         {
-            _logger.LogInformation("Request to add new User: {@User}", User);
+            return await _userRepository.GetAll();
+        }
 
-            var validator = new ValidatData.Settings.UserValidator();
-            var result = validator.Validate(User);
+        public async Task<User?> GetById(int id)
+        {
+            return await _userRepository.GetById(id);
+        }
 
-            if (!result.IsValid)
+        public async Task<Result> Create(User user, int currentUserId)
+        {
+            using var transaction = await _context.Database.BeginTransactionAsync();
+
+            try
             {
-                var errors = string.Join(" | ", result.Errors.Select(e => e.ErrorMessage));
-                _logger.LogWarning("Error validating User: {Errors}", errors);
-                throw new ValidationException("خطا در اعتبارسنجی : " + errors);
-            }
+                // اعتبارسنجی
+                if (string.IsNullOrWhiteSpace(user.UserName))
+                    return Result.Failure("نام کاربری الزامی است.");
 
-            var message = await _UserRepository.Create(UserId ,User);
-            _logger.LogInformation("Add result: {Message}", message);
-            return message;
+                if (string.IsNullOrWhiteSpace(user.Password))
+                    return Result.Failure("رمز عبور الزامی است.");
+
+                if (user.Password.Length < 6)
+                    return Result.Failure("رمز عبور باید حداقل ۶ کاراکتر باشد.");
+
+                if (user.PeopleId <= 0)
+                    return Result.Failure("شخص باید انتخاب شود.");
+
+                if (user.GroupUserId <= 0)
+                    return Result.Failure("گروه کاربری باید انتخاب شود.");
+
+                // ایجاد کاربر
+                var result = await _userRepository.Create(user);
+                if (!result.IsSuccess)
+                    return result;
+
+                // ذخیره تغییرات
+                await _context.SaveChangesAsync();
+
+                // ثبت لاگ
+                await _logService.CreateLogAsync(
+                    $"ایجاد کاربر جدید: {user.UserName} (شناسه: {user.Id})",
+                    currentUserId);
+
+                await transaction.CommitAsync();
+                return Result.Success("کاربر با موفقیت ایجاد شد.");
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                _logger.LogError(ex, "خطا در ایجاد کاربر: {@User}", user);
+                return Result.Failure($"خطا در ایجاد کاربر: {ex.Message}");
+            }
         }
-        public async Task<string> Update(int UserId ,BusinessEntity.Settings.User User)
+
+        public async Task<Result> Update(User user, int currentUserId)
         {
-            _logger.LogInformation("Request to update User: {@User}", User);
+            using var transaction = await _context.Database.BeginTransactionAsync();
 
-            var validator = new ValidatData.Settings.UserValidator();
-            var result = validator.Validate(User);
-
-            if (!result.IsValid)
+            try
             {
-                var errors = string.Join(" | ", result.Errors.Select(e => e.ErrorMessage));
-                _logger.LogWarning("Error validating User: {Errors}", errors);
-                throw new ValidationException("خطا در اعتبارسنجی : " + errors);
-            }
+                // اعتبارسنجی
+                if (string.IsNullOrWhiteSpace(user.UserName))
+                    return Result.Failure("نام کاربری الزامی است.");
 
-            var existing = await _UserRepository.GetById(User.Id);
-            if (existing == null)
+                if (user.PeopleId <= 0)
+                    return Result.Failure("شخص باید انتخاب شود.");
+
+                if (user.GroupUserId <= 0)
+                    return Result.Failure("گروه کاربری باید انتخاب شود.");
+
+                // اگر رمز عبور جدید داده شده
+                if (!string.IsNullOrWhiteSpace(user.Password) && user.Password.Length < 6)
+                    return Result.Failure("رمز عبور جدید باید حداقل ۶ کاراکتر باشد.");
+
+                // به‌روزرسانی کاربر
+                var result = await _userRepository.Update(user);
+                if (!result.IsSuccess)
+                    return result;
+
+                // ذخیره تغییرات
+                await _context.SaveChangesAsync();
+
+                // ثبت لاگ
+                await _logService.CreateLogAsync(
+                    $"به‌روزرسانی کاربر: {user.UserName} (شناسه: {user.Id})",
+                    currentUserId);
+
+                await transaction.CommitAsync();
+                return Result.Success("کاربر با موفقیت به‌روزرسانی شد.");
+            }
+            catch (Exception ex)
             {
-                _logger.LogWarning("User with ID: {Id} not found for update.", User.Id);
-                throw new KeyNotFoundException(" درخواست مورد نظر یافت نشد.");
+                await transaction.RollbackAsync();
+                _logger.LogError(ex, "خطا در به‌روزرسانی کاربر: {@User}", user);
+                return Result.Failure($"خطا در به‌روزرسانی کاربر: {ex.Message}");
             }
+        }
 
-            var message = await _UserRepository.Update(UserId ,User);
-            _logger.LogInformation("Update result: {Message}", message);
-            return message;
+        public async Task<Result> Delete(int id, int currentUserId)
+        {
+            using var transaction = await _context.Database.BeginTransactionAsync();
+
+            try
+            {
+                // دریافت اطلاعات کاربر برای لاگ
+                var user = await _userRepository.GetById(id);
+                if (user == null)
+                    return Result.Failure("کاربر یافت نشد.");
+
+                // بررسی اینکه کاربر جاری خودش را حذف نکند
+                if (user.Id == currentUserId)
+                    return Result.Failure("شما نمی‌توانید حساب کاربری خود را حذف کنید.");
+
+                // حذف کاربر
+                var result = await _userRepository.Delete(id);
+                if (!result.IsSuccess)
+                    return result;
+
+                // ذخیره تغییرات
+                await _context.SaveChangesAsync();
+
+                // ثبت لاگ
+                await _logService.CreateLogAsync(
+                    $"حذف کاربر: {user.UserName} (شناسه: {id})",
+                    currentUserId);
+
+                await transaction.CommitAsync();
+                return Result.Success("کاربر با موفقیت حذف شد.");
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                _logger.LogError(ex, "خطا در حذف کاربر با شناسه: {Id}", id);
+                return Result.Failure($"خطا در حذف کاربر: {ex.Message}");
+            }
         }
     }
-
 }

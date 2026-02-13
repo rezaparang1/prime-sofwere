@@ -6,9 +6,13 @@ using System.Threading.Tasks;
 
 namespace BusinessLogicLayer.Interface
 {
-    public interface IDatabaseService
+    public interface IRepository<T> where T : class
     {
-        Task<string> BackupDatabaseAsync(string backupPath);
-        Task<string> RestoreDatabaseAsync(string backupFile);
+        Task AddAsync(T entity);
+        Task UpdateAsync(T entity);
+        Task DeleteAsync(int id);
+        Task<T?> GetByIdAsync(int id);
+        Task<List<T>> GetAllAsync();
     }
+
 }
