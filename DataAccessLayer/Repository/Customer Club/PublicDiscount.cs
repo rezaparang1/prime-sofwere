@@ -17,7 +17,7 @@ namespace DataAccessLayer.Repository.Customer_Club
 
         public async Task<IEnumerable<PublicDiscount>> GetActivePublicDiscountsAsync(int storeId)
         {
-            var now = DateTime.Now;
+            var now = DateTime.UtcNow;
             return await _dbSet
                 .Where(pd => pd.StoreId == storeId &&
                             pd.IsActive &&
@@ -29,7 +29,7 @@ namespace DataAccessLayer.Repository.Customer_Club
 
         public async Task<IEnumerable<PublicDiscount>> GetActivePublicDiscountsWithProductsAsync(int storeId)
         {
-            var now = DateTime.Now;
+            var now = DateTime.UtcNow;
             return await _dbSet
                 .Include(pd => pd.Products)
                     .ThenInclude(p => p.Product)
@@ -97,7 +97,7 @@ namespace DataAccessLayer.Repository.Customer_Club
 
         public async Task<IEnumerable<PublicDiscount>> GetDiscountsByDayOfWeekAsync(int storeId, DayOfWeek dayOfWeek)
         {
-            var now = DateTime.Now;
+            var now = DateTime.UtcNow;
             return await _dbSet
                 .Where(pd => pd.StoreId == storeId &&
                             pd.IsActive &&

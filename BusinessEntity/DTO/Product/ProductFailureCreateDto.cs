@@ -9,7 +9,7 @@ namespace BusinessEntity.DTO.Product
 {
     public class FailureSubmitModel
     {
-        public DateTime Date { get; set; } = DateTime.Now;
+        public DateTime Date { get; set; } = DateTime.UtcNow;
         public string Description { get; set; } = string.Empty;
 
         // حساب مقصد (صندوق یا حساب بانکی) از ComboBox می‌فرستیم

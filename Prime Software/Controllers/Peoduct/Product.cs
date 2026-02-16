@@ -27,6 +27,46 @@ namespace Prime_Software.Controllers.Peoduct
             _productService = productService;
         }
 
+        [HttpGet("barcode-info")]
+        public async Task<IActionResult> GetProductInfoForInvoice(
+    [FromQuery] string barcode,
+    [FromQuery] int? peopleId = null,
+    [FromQuery] int? customerId = null,
+    [FromQuery] int? storeId = null)
+        {
+            var result = await _productService.GetProductInfoForInvoiceAsync(barcode, peopleId, customerId, storeId);
+            if (!result.IsSuccess)
+                return BadRequest(new { success = false, message = result.Message });
+
+            return Ok(new { success = true, data = result.Data });
+        }
+
+        [HttpGet("active-with-shortcut")]
+        public async Task<IActionResult> GetActiveProductsWithShortcutKey()
+        {
+            var products = await _productService.GetActiveProductsWithShortcutKeyAsync();
+            return Ok(new { success = true, data = products });
+        }
+        [HttpGet("active-button")]
+        public async Task<IActionResult> GetActiveButtonProducts()
+        {
+            var products = await _productService.GetActiveButtonProductsAsync();
+            return Ok(new { success = true, data = products });
+        }
+
+        [HttpGet("active-weighty")]
+        public async Task<IActionResult> GetActiveWeightyProducts()
+        {
+            var products = await _productService.GetActiveWeightyProductsAsync();
+            return Ok(new { success = true, data = products });
+        }
+
+        [HttpGet("active-barcode")]
+        public async Task<IActionResult> GetActiveBarcodeProducts()
+        {
+            var products = await _productService.GetActiveBarcodeProductsAsync();
+            return Ok(new { success = true, data = products });
+        }
 
         [HttpGet("sales")]
         public async Task<IActionResult> GetSalesReport([FromQuery] DateTime startDate, [FromQuery] DateTime endDate, [FromQuery] string? barcode = null)

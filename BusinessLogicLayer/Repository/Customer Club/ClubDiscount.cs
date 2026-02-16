@@ -15,6 +15,43 @@ namespace BusinessLogicLayer.Repository.Customer_Club
             _unitOfWork = unitOfWork;
         }
 
+        public async Task<Result<IEnumerable<ClubDiscountDto>>> SearchDiscountsAsync(ClubDiscountSearchDto searchDto)
+        {
+            var query = await _unitOfWork.ClubDiscounts.GetAllAsync(); // دریافت همه تخفیف‌ها (یا می‌توانید از متد FindAsync با شرط استفاده کنید)
+
+            // اعمال فیلترها
+            if (searchDto.StoreId.HasValue)
+                query = query.Where(d => d.StoreId == searchDto.StoreId.Value);
+
+            if (searchDto.FromDate.HasValue)
+                query = query.Where(d => d.StartDate >= searchDto.FromDate.Value);
+
+            if (searchDto.ToDate.HasValue)
+                query = query.Where(d => d.EndDate <= searchDto.ToDate.Value);
+
+            if (!string.IsNullOrWhiteSpace(searchDto.Title))
+                query = query.Where(d => d.Title.Contains(searchDto.Title));
+
+            if (searchDto.ProductId.HasValue || searchDto.UnitLevelId.HasValue)
+            {
+                query = query.Where(d => d.Products.Any(p =>
+                    (searchDto.ProductId.HasValue && p.ProductId == searchDto.ProductId) ||
+                    (searchDto.UnitLevelId.HasValue && p.UnitLevelId == searchDto.UnitLevelId)
+                ));
+            }
+
+            if (searchDto.IsActive.HasValue)
+                query = query.Where(d => d.IsActive == searchDto.IsActive.Value);
+
+            var dtos = new List<ClubDiscountDto>();
+            foreach (var discount in query)
+            {
+                dtos.Add(await MapToDto(discount));
+            }
+
+            return Result<IEnumerable<ClubDiscountDto>>.Success(dtos);
+        }
+
         public async Task<Result<ClubDiscountDto>> CreateClubDiscountAsync(ClubDiscountCreateDto dto)
         {
             if (dto.StartDate >= dto.EndDate)
@@ -77,6 +114,103 @@ namespace BusinessLogicLayer.Repository.Customer_Club
             return Result<ClubDiscountDto>.Success(resultDto, "تخفیف باشگاه با موفقیت ایجاد شد");
         }
 
+        public async Task<Result<ClubDiscountDto>> UpdateClubDiscountAsync(ClubDiscountUpdateDto dto)
+        {
+            var discount = await _unitOfWork.ClubDiscounts.GetDiscountWithProductsAsync(dto.Id);
+            if (discount == null)
+                return Result<ClubDiscountDto>.Failure("تخفیف یافت نشد");
+
+            // به‌روزرسانی فیلدهای اصلی در صورت وجود
+            if (!string.IsNullOrWhiteSpace(dto.Title))
+                discount.Title = dto.Title;
+
+            if (dto.Description != null)
+                discount.Description = dto.Description;
+
+            if (dto.StartDate.HasValue)
+                discount.StartDate = dto.StartDate.Value;
+
+            if (dto.EndDate.HasValue)
+                discount.EndDate = dto.EndDate.Value;
+
+            if (dto.StartTime.HasValue)
+                discount.StartTime = dto.StartTime.Value;
+
+            if (dto.EndTime.HasValue)
+                discount.EndTime = dto.EndTime.Value;
+
+            if (dto.Type.HasValue)
+                discount.Type = dto.Type.Value;
+
+            if (dto.Value.HasValue)
+                discount.Value = dto.Value.Value;
+
+            if (dto.RefundToWallet.HasValue)
+                discount.RefundToWallet = dto.RefundToWallet.Value;
+
+            if (dto.IsActive.HasValue)
+                discount.IsActive = dto.IsActive.Value;
+
+            // مدیریت محصولات
+            foreach (var prodDto in dto.Products)
+            {
+                if (prodDto.Id.HasValue)
+                {
+                    // ویرایش محصول موجود
+                    var existingProduct = discount.Products.FirstOrDefault(p => p.Id == prodDto.Id);
+                    if (existingProduct != null)
+                    {
+                        if (prodDto.IsDeleted)
+                        {
+                            _unitOfWork.ClubDiscountProducts.Remove(existingProduct);
+                        }
+                        else
+                        {
+                            existingProduct.ProductId = prodDto.ProductId;
+                            existingProduct.UnitLevelId = prodDto.UnitLevelId;
+                            existingProduct.ClubPrice = prodDto.ClubPrice;
+                            // به‌روزرسانی OriginalPrice در صورت نیاز
+                        }
+                    }
+                }
+                else if (!prodDto.IsDeleted)
+                {
+                    // افزودن محصول جدید
+                    int originalPrice = 0;
+                    if (prodDto.ProductId.HasValue)
+                    {
+                        var product = await _unitOfWork.Products.GetByIdAsync(prodDto.ProductId.Value);
+                        originalPrice = product != null ? (int)product.SalePrice : 0;
+                    }
+                    else if (prodDto.UnitLevelId.HasValue)
+                    {
+                        var unit = await _unitOfWork.UnitsLevels.GetByIdAsync(prodDto.UnitLevelId.Value);
+                        if (unit != null)
+                        {
+                            var defaultPrice = unit.Prices.FirstOrDefault(p => p.PriceLevelId == 1);
+                            originalPrice = defaultPrice != null ? (int)defaultPrice.SalePrice : (int)(unit.Product?.SalePrice ?? 0);
+                        }
+                    }
+
+                    var newProduct = new ClubDiscountProduct
+                    {
+                        ClubDiscountId = discount.Id,
+                        ProductId = prodDto.ProductId,
+                        UnitLevelId = prodDto.UnitLevelId,
+                        ClubPrice = prodDto.ClubPrice,
+                        OriginalPrice = originalPrice
+                    };
+                    await _unitOfWork.ClubDiscountProducts.AddAsync(newProduct);
+                }
+            }
+
+            _unitOfWork.ClubDiscounts.Update(discount);
+            await _unitOfWork.SaveChangesAsync();
+
+            var resultDto = await MapToDto(discount);
+            return Result<ClubDiscountDto>.Success(resultDto, "تخفیف با موفقیت ویرایش شد");
+        }
+
         public async Task<Result<ClubDiscountCalculationResult>> CalculateClubDiscountAsync(string barcode, int customerId, int originalPrice)
         {
             var result = new ClubDiscountCalculationResult { DiscountAmount = 0 };
@@ -91,7 +225,7 @@ namespace BusinessLogicLayer.Repository.Customer_Club
             if (barcodeEntity == null)
                 return Result<ClubDiscountCalculationResult>.Success(result);
 
-            var now = DateTime.Now;
+            var now = DateTime.UtcNow;
 
             // 3. جستجوی تخفیف‌های مخصوص این واحد
             var discounts = new List<ClubDiscount>();
@@ -154,13 +288,13 @@ namespace BusinessLogicLayer.Repository.Customer_Club
 
         public async Task<Result<bool>> HasActiveDiscountForProductAsync(int productId, int storeId)
         {
-            var has = await _unitOfWork.ClubDiscounts.HasActiveDiscountForProductAsync(productId, DateTime.Now, storeId);
+            var has = await _unitOfWork.ClubDiscounts.HasActiveDiscountForProductAsync(productId, DateTime.UtcNow, storeId);
             return Result<bool>.Success(has);
         }
 
         public async Task<Result<bool>> HasActiveDiscountForUnitAsync(int unitLevelId, int storeId)
         {
-            var has = await _unitOfWork.ClubDiscounts.HasActiveDiscountForUnitAsync(unitLevelId, DateTime.Now, storeId);
+            var has = await _unitOfWork.ClubDiscounts.HasActiveDiscountForUnitAsync(unitLevelId, DateTime.UtcNow, storeId);
             return Result<bool>.Success(has);
         }
 

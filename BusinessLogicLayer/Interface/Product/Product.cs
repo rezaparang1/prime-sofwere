@@ -1,20 +1,17 @@
-﻿
-
-
+﻿using BusinessEntity.Product;
 using BusinessLogicLayer.DTO;
 
 namespace BusinessLogicLayer.Interface.Producr
 {
     public interface IProductService
     {
+        Task<Result<ProductBarcodeInfoDto>> GetProductInfoForInvoiceAsync(string barcode,int? peopleId = null,int? customerId = null,int? storeId = null);
         Task<IEnumerable<BusinessEntity.DTO.Product.ProductInventoryDto>> GetProductInventoryAsync(string? barcode = null);
         Task<IEnumerable<BusinessEntity.DTO.Product.ProductSalesByDateDto>> GetProductSalesReportByDateAsync(DateTime startDate, DateTime endDate, string? barcode = null);
-        //Task<List<BusinessEntity.Product.Product>> SearchbyweightedProducts(bool? Isweighty, bool? IsActive);
-        //Task<List<BusinessEntity.Product.Product>> SearchbyButtonProducts();
-        //Task<BusinessEntity.Product.Product?> GetProductByBarcode(string? Barcode);
-        //Task<BusinessEntity.Product.Product?> GetByShortcutKey(string? ShortcutKey);
-        //Task<IEnumerable<BusinessEntity.Product.ProductReportDto>> GetProductReport();
-        //Task<BusinessEntity.ProductDto?> GetProductByBarcodeAsync(string Barcode);
+        Task<List<BusinessEntity.Product.Product>> GetActiveButtonProductsAsync();
+        Task<List<BusinessEntity.Product.Product>> GetActiveWeightyProductsAsync();
+        Task<List<BusinessEntity.Product.Product>> GetActiveBarcodeProductsAsync();
+        Task<List<BusinessEntity.Product.Product>> GetActiveProductsWithShortcutKeyAsync();
         Task<Result<ProductBarcodeInfoDto>> GetProductInfoByBarcodeAsync(string barcode, int? customerId = null, int? storeId = null);
         Task<IEnumerable<BusinessEntity.Product.Product>> GetAll();
         Task<BusinessEntity.Product.Product?> GetById(int id);

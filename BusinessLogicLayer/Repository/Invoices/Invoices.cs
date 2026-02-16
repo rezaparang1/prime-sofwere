@@ -39,6 +39,124 @@ namespace BusinessLogicLayer.Repository.Invoices
             _logger = logger;
         }
 
+        public async Task<Result<InvoiceCalculationResultDto>> CalculateInvoiceAsync(InvoiceCalculationRequestDto request)
+        {
+            // 1. اعتبارسنجی مشتری
+            BusinessEntity.People.People people = null;
+            if (request.PeopleId.HasValue)
+            {
+                people = await _unitOfWork.People.GetByIdAsync(request.PeopleId.Value);
+                if (people == null)
+                    return Result<InvoiceCalculationResultDto>.Failure("شخص یافت نشد");
+            }
+
+            Customer customer = null;
+            if (request.CustomerId.HasValue)
+            {
+                customer = await _unitOfWork.Customers.GetByIdAsync(request.CustomerId.Value);
+                if (customer == null)
+                    return Result<InvoiceCalculationResultDto>.Failure("عضو باشگاه یافت نشد");
+            }
+
+            int totalOriginalPrice = 0;
+            int totalPublicDiscount = 0;
+            int totalClubDiscount = 0;
+            int totalLevelDiscount = 0;
+            var calculatedItems = new List<CalculatedItemDto>();
+
+            // 2. پردازش هر آیتم
+            foreach (var item in request.Items)
+            {
+                // دریافت اطلاعات کالا
+                var barcodeEntity = await _unitOfWork.ProductBarcodes.GetByBarcodeAsync(item.Barcode);
+                if (barcodeEntity == null)
+                    continue; // یا می‌توانید خطا برگردانید
+
+                var unitLevel = await _unitOfWork.UnitsLevels.GetByIdAsync(barcodeEntity.ProductUnitId);
+                if (unitLevel == null)
+                    continue;
+
+                var product = await _unitOfWork.Products.GetByIdAsync(unitLevel.ProductId);
+                if (product == null)
+                    continue;
+
+                // تعیین قیمت واحد بر اساس سطح قیمتی شخص
+                int unitPrice = 0;
+                if (people != null)
+                {
+                    var price = unitLevel.Prices.FirstOrDefault(p => p.PriceLevelId == people.PriceLevelID);
+                    unitPrice = price != null ? (int)price.SalePrice : (int)product.SalePrice;
+                }
+                else
+                {
+                    unitPrice = (int)product.SalePrice; // قیمت پیش‌فرض
+                }
+
+                int originalTotal = unitPrice * item.Quantity;
+                totalOriginalPrice += originalTotal;
+
+                // تخفیف عمومی
+                int publicDiscountAmount = 0;
+                var publicResult = await _publicDiscountService.CalculatePublicDiscountAsync(
+                    item.Barcode, DateTime.Now, request.StoreId);
+                if (publicResult.IsSuccess)
+                    publicDiscountAmount = publicResult.Data.DiscountAmount * item.Quantity;
+
+                // تخفیف باشگاه (فقط در صورت وجود مشتری باشگاه)
+                int clubDiscountAmount = 0;
+                if (customer != null)
+                {
+                    var clubResult = await _clubDiscountService.CalculateClubDiscountAsync(
+                        item.Barcode, customer.Id, originalTotal - publicDiscountAmount);
+                    if (clubResult.IsSuccess)
+                        clubDiscountAmount = clubResult.Data.DiscountAmount;
+                }
+
+                int finalPrice = originalTotal - publicDiscountAmount - clubDiscountAmount;
+
+                calculatedItems.Add(new CalculatedItemDto
+                {
+                    Barcode = item.Barcode,
+                    ProductName = product.Name,
+                    UnitName = unitLevel.Title,
+                    Quantity = item.Quantity,
+                    UnitPrice = unitPrice,
+                    OriginalPrice = originalTotal,
+                    PublicDiscount = publicDiscountAmount,
+                    ClubDiscount = clubDiscountAmount,
+                    FinalPrice = finalPrice
+                });
+
+                totalPublicDiscount += publicDiscountAmount;
+                totalClubDiscount += clubDiscountAmount;
+            }
+
+            // 3. تخفیف سطح مشتری (در صورت وجود مشتری باشگاه)
+            if (customer != null)
+            {
+                var levelResult = await _customerService.GetCustomerCurrentLevelAsync(customer.Id);
+                if (levelResult.IsSuccess && levelResult.Data != null)
+                {
+                    var amountBeforeLevel = totalOriginalPrice - totalPublicDiscount - totalClubDiscount;
+                    totalLevelDiscount = (int)(amountBeforeLevel * levelResult.Data.DiscountPercent / 100);
+                }
+            }
+
+            int finalInvoiceAmount = totalOriginalPrice - totalPublicDiscount - totalClubDiscount - totalLevelDiscount;
+
+            var resultDto = new InvoiceCalculationResultDto
+            {
+                TotalOriginalPrice = totalOriginalPrice,
+                TotalPublicDiscount = totalPublicDiscount,
+                TotalClubDiscount = totalClubDiscount,
+                TotalLevelDiscount = totalLevelDiscount,
+                FinalAmount = finalInvoiceAmount,
+                Items = calculatedItems
+            };
+
+            return Result<InvoiceCalculationResultDto>.Success(resultDto);
+        }
+
         public async Task<Result<InvoiceDto>> CreateInvoiceWithAllDiscountsAsync(InvoiceCreateDto dto)
         {
             await _unitOfWork.BeginTransactionAsync();
@@ -375,7 +493,7 @@ namespace BusinessLogicLayer.Repository.Invoices
 
         private string GenerateInvoiceNumber()
         {
-            return $"INV-{DateTime.Now:yyyyMMddHHmmss}-{new Random().Next(1000, 9999)}";
+            return $"INV-{DateTime.UtcNow:yyyyMMddHHmmss}-{new Random().Next(1000, 9999)}";
         }
 
         private async Task CreateTransaction(int accountId, long amount, string type, string description)
@@ -386,7 +504,7 @@ namespace BusinessLogicLayer.Repository.Invoices
                 Amount = amount,
                 Type = type,
                 Description = description,
-                Date = DateTime.Now
+                Date = DateTime.UtcNow
             };
             await _unitOfWork.Transactions.AddAsync(transaction);
         }
@@ -412,7 +530,7 @@ namespace BusinessLogicLayer.Repository.Invoices
                 UsedWalletAmount = invoice.UsedWalletAmount,
                 FinalAmount = invoice.TotalSum,
                 EarnedPoints = invoice.EarnedPoints,
-                Items = items.Select(i => new InvoiceItemDto
+                Items = items.Select(i => new DTO.InvoiceItem
                 {
                     Barcode = i.Barcode,
                     ProductId = i.ProductId,

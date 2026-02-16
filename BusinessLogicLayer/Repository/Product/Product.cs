@@ -12,141 +12,6 @@ using Microsoft.Extensions.Logging;
 
 namespace BusinessLogicLayer.Repository.Product
 {
-    //public class ProductService : Interface.Producr.IProductService
-    //{
-    //    private readonly DataAccessLayer.Interface.Product.IProductRepository _ProductRepository;
-    //    private readonly ILogger<ProductService> _logger;
-
-    //    public ProductService(DataAccessLayer.Interface.Product.IProductRepository ProductRepository, ILogger<ProductService> logger)
-    //    {
-    //        _ProductRepository = ProductRepository;
-    //        _logger = logger;
-    //    }
-    //    //*******SEARCH*******
-
-
-    //    public async Task<BusinessEntity.ProductDto?> GetProductByBarcodeAsync(string barcode)
-    //    {
-    //        _logger.LogInformation("Request to receive Product with ID: {Id}", barcode);
-    //        var entity = await _ProductRepository.GetProductByBarcodeAsync(barcode);
-    //        if (entity == null)
-    //            _logger.LogWarning("Product with ID {barcode} not found", barcode);
-    //        else
-    //            _logger.LogInformation("Product with ID {barcode} was successfully found", barcode);
-
-    //        return entity;
-    //    }
-    //    public async Task<List<BusinessEntity.Product.Product>> Search(string? Name = null, string? Barcode = null, int? TypeProduct = null, bool? IsActive = null, string? Description = null, bool? IsTax = null, int? GroupId = null, int? StoreroomId = null, int? UnitId = null, int? SectionId = null)
-    //    {
-    //        _logger.LogInformation("Request Group_Product search with Async: {Name}{Barcode}{TypeProduct}{IsActive}{Description}{IsTax}{GroupId}{StoreroomId}{UnitId}{SectionId}",
-    //            Name, Barcode, TypeProduct, IsActive, Description, IsTax, GroupId, StoreroomId, UnitId, SectionId);
-    //        var result = await _ProductRepository.Search(Name,Barcode,TypeProduct,IsActive,Description,IsTax,GroupId,StoreroomId,UnitId,SectionId);
-    //        _logger.LogInformation("{Count} results found", result.Count);
-    //        return result;
-    //    }
-    //    public async Task<List<BusinessEntity.Product.Product>> SearchbyweightedProducts(bool? Isweighty, bool? IsActive)
-    //    {
-    //        _logger.LogInformation("Request Group_Product search with Async: {Isweighty}{IsActive}",
-    //           IsActive, Isweighty);
-    //        var result = await _ProductRepository.SearchbyweightedProducts( IsActive, Isweighty);
-    //        _logger.LogInformation("{Count} results found", result.Count);
-    //        return result;
-    //    }
-    //    public async Task<List<BusinessEntity.Product.Product>> SearchbyButtonProducts()
-    //    {
-    //        _logger.LogInformation("Request Group_Product search with Async: Isweighty and IsActive");
-    //        var result = await _ProductRepository.SearchbyButtonProducts();
-    //        _logger.LogInformation("{Count} results found", result.Count);
-    //        return result;
-    //    }
-    //    public async Task<BusinessEntity.Product.Product?> GetProductByBarcode(string? Barcode)
-    //    {
-    //        _logger.LogInformation("Request to receive Product with ID: {Id}", Barcode);
-    //        var entity = await _ProductRepository.GetProductByBarcode(Barcode);
-    //        if (entity == null)
-    //            _logger.LogWarning("Product with ID {Barcode} not found", Barcode);
-    //        else
-    //            _logger.LogInformation("Product with ID {Barcode} was successfully found", Barcode);
-
-    //        return entity;
-    //    }
-    //    public async Task<BusinessEntity.Product.Product?> GetByShortcutKey(string? ShortcutKey)
-    //    {
-    //        _logger.LogInformation("Request to receive Product with ID: {Id}", ShortcutKey);
-    //        var entity = await _ProductRepository.GetByShortcutKey(ShortcutKey);
-    //        if (entity == null)
-    //            _logger.LogWarning("Product with ID {ShortcutKey} not found", ShortcutKey);
-    //        else
-    //            _logger.LogInformation("Product with ID {ShortcutKey} was successfully found", ShortcutKey);
-
-    //        return entity;
-    //    }
-    //    //*******READ*********
-    //    public async Task<IEnumerable<BusinessEntity.Product.Product>> GetAll()
-    //    {
-    //        _logger.LogInformation("Request to receive all Group_Product");
-    //        var result = await _ProductRepository.GetAll();
-    //        _logger.LogInformation("{Count} items received", result.Count());
-    //        return result;
-    //    }
-    //    public async Task<IEnumerable<BusinessEntity.Product.ProductReportDto>> GetProductReport()
-    //    {
-    //        _logger.LogInformation("Request to receive all Group_Product");
-    //        var result = await _ProductRepository.GetProductReport();
-    //        _logger.LogInformation("{Count} items received", result.Count());
-    //        return result;
-    //    }
-    //    public async Task<BusinessEntity.Product.Product?> GetById(int id)
-    //    {
-    //        _logger.LogInformation("Request to receive Group_Product with ID: {Id}", id);
-    //        var entity = await _ProductRepository.GetById(id);
-    //        if (entity == null)
-    //            _logger.LogWarning("Group_Product with ID {Id} not found", id);
-    //        else
-    //            _logger.LogInformation("Group_Product with ID {Id} was successfully found", id);
-
-    //        return entity;
-    //    }
-    //    //*****CRUD**********     
-    //    public async Task<ServiceResult> Create(int userId, BusinessEntity.Product.Product product)
-    //    {
-    //        _logger.LogInformation("Request to add new Product: {@Product}", product);
-
-    //        var repoResult = await _ProductRepository.Create(userId, product);
-
-    //        var result = new ServiceResult(repoResult.Success, repoResult.Message);
-
-    //        _logger.LogInformation("Add result: {@Result}", result);
-    //        return result;
-    //    }
-    //    public async Task<ServiceResult> Update(int userId, BusinessEntity.Product.Product product)
-    //    {
-    //        _logger.LogInformation("Request to update Product: {@Product}", product);
-
-    //        var existing = await _ProductRepository.GetById(product.Id);
-    //        if (existing == null)
-    //        {
-    //            _logger.LogWarning("Product with ID: {Id} not found for update.", product.Id);
-    //            return new ServiceResult(false, "کالا پیدا نشد.");
-    //        }
-
-    //        var repoResult = await _ProductRepository.Update(userId, product);
-    //        var result = new ServiceResult(repoResult.Success, repoResult.Message);
-
-    //        _logger.LogInformation("Update result: {@Result}", result);
-    //        return result;
-    //    }
-    //    public async Task<ServiceResult> Delete(int userId, int productId)
-    //    {
-    //        _logger.LogInformation("Request to delete Product with ID: {Id}", productId);
-
-    //        var repoResult = await _ProductRepository.Delete(userId, productId);
-    //        var result = new ServiceResult(repoResult.Success, repoResult.Message);
-
-    //        _logger.LogInformation("Delete result: {@Result}", result);
-    //        return result;
-    //    }
-    //}
     public class ProductService : IProductService
     {
         private readonly IUnitOfWork _unitOfWork;
@@ -175,6 +40,122 @@ namespace BusinessLogicLayer.Repository.Product
             _clubDiscountService = clubDiscountService;
         }
 
+        public async Task<Result<ProductBarcodeInfoDto>> GetProductInfoForInvoiceAsync(
+    string barcode,
+    int? peopleId = null,
+    int? customerId = null,
+    int? storeId = null)
+        {
+            // 1. اعتبارسنجی اولیه
+            if (string.IsNullOrWhiteSpace(barcode))
+                return Result<ProductBarcodeInfoDto>.Failure("بارکد نمی‌تواند خالی باشد");
+
+            // 2. یافتن واحد کالا با بارکد
+            var barcodeEntity = await _unitOfWork.ProductBarcodes.GetByBarcodeAsync(barcode);
+            if (barcodeEntity == null)
+                return Result<ProductBarcodeInfoDto>.Failure("بارکد یافت نشد");
+
+            // 3. یافتن واحد کالا
+            var unitLevel = await _unitOfWork.UnitsLevels.GetByIdAsync(barcodeEntity.ProductUnitId);
+            if (unitLevel == null)
+                return Result<ProductBarcodeInfoDto>.Failure("واحد کالا یافت نشد");
+
+            // 4. یافتن محصول
+            var product = await _unitOfWork.Products.GetByIdAsync(unitLevel.ProductId);
+            if (product == null)
+                return Result<ProductBarcodeInfoDto>.Failure("محصول یافت نشد");
+
+            // 5. تعیین سطح قیمتی
+            int priceLevelId = 1; // پیش‌فرض
+            if (peopleId.HasValue)
+            {
+                var people = await _unitOfWork.People.GetByIdAsync(peopleId.Value);
+                if (people != null)
+                    priceLevelId = people.PriceLevelID;
+            }
+            else if (customerId.HasValue)
+            {
+                var customer = await _unitOfWork.Customers.GetByIdAsync(customerId.Value);
+                if (customer?.PeopleId != null)
+                {
+                    var people = await _unitOfWork.People.GetByIdAsync(customer.PeopleId.Value);
+                    if (people != null)
+                        priceLevelId = people.PriceLevelID;
+                }
+            }
+
+            // 6. محاسبه قیمت اصلی بر اساس سطح قیمتی
+            int originalPrice = 0;
+            var price = unitLevel.Prices.FirstOrDefault(p => p.PriceLevelId == priceLevelId);
+            originalPrice = price != null ? (int)price.SalePrice : (int)product.SalePrice;
+
+            // 7. محاسبه تخفیف عمومی
+            int publicDiscount = 0;
+            if (storeId.HasValue)
+            {
+                var publicResult = await _publicDiscountService.CalculatePublicDiscountAsync(
+                    barcode, DateTime.Now, storeId.Value);
+                if (publicResult.IsSuccess)
+                    publicDiscount = publicResult.Data.DiscountAmount;
+            }
+
+            // 8. محاسبه تخفیف باشگاه (فقط در صورت وجود customerId)
+            int clubDiscount = 0;
+            if (customerId.HasValue)
+            {
+                var clubResult = await _clubDiscountService.CalculateClubDiscountAsync(
+                    barcode, customerId.Value, originalPrice - publicDiscount);
+                if (clubResult.IsSuccess)
+                    clubDiscount = clubResult.Data.DiscountAmount;
+            }
+
+            // 9. قیمت نهایی
+            int finalPrice = originalPrice - publicDiscount - clubDiscount;
+
+            // 10. ساخت DTO
+            var dto = new ProductBarcodeInfoDto
+            {
+                Barcode = barcode,
+                ProductId = product.Id,
+                ProductName = product.Name,
+                UnitId = unitLevel.Id,
+                UnitName = unitLevel.Title,
+                ConversionFactor = unitLevel.ConversionFactor,
+                BaseProductId = product.Id,
+                BaseUnitId = unitLevel.UnitProductId != 0 ? unitLevel.UnitProductId : product.UnitProductId,
+                OriginalPrice = originalPrice,
+                FinalPrice = finalPrice,
+                Discounts = new DiscountDetailDto
+                {
+                    PublicDiscount = publicDiscount,
+                    ClubDiscount = clubDiscount,
+                    LevelDiscount = 0
+                },
+                Stock = product.Inventory,
+                ImagePath = product.ImagePath
+            };
+
+            return Result<ProductBarcodeInfoDto>.Success(dto);
+        }
+
+        public async Task<List<BusinessEntity.Product.Product>> GetActiveProductsWithShortcutKeyAsync()
+        {
+            return await _productRepository.GetActiveProductsWithShortcutKeyAsync();
+        }
+        public async Task<List<BusinessEntity.Product.Product>> GetActiveButtonProductsAsync()
+        {
+            return await _productRepository.GetActiveButtonProductsAsync();
+        }
+
+        public async Task<List<BusinessEntity.Product.Product>> GetActiveWeightyProductsAsync()
+        {
+            return await _productRepository.GetActiveWeightyProductsAsync();
+        }
+
+        public async Task<List<BusinessEntity.Product.Product>> GetActiveBarcodeProductsAsync()
+        {
+            return await _productRepository.GetActiveBarcodeProductsAsync();
+        }
         public async Task<Result<ProductBarcodeInfoDto>> GetProductInfoByBarcodeAsync(
      string barcode,
      int? customerId = null,
@@ -230,7 +211,7 @@ namespace BusinessLogicLayer.Repository.Product
             {
                 var publicResult = await _publicDiscountService.CalculatePublicDiscountAsync(
                     barcode,
-                    DateTime.Now,
+                    DateTime.UtcNow,
                     storeId.Value);                        // ✅ استفاده از storeId ورودی
                 if (publicResult.IsSuccess)
                     publicDiscount = publicResult.Data.DiscountAmount;

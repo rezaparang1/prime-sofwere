@@ -9,7 +9,7 @@ namespace BusinessEntity.Invoices
     public class Transaction
     {
         public int TransactionId { get; set; }
-        public DateTime Date { get; set; } = DateTime.Now;
+        public DateTime Date { get; set; } = DateTime.UtcNow;
 
         public int AccountId { get; set; }
         public Account Account { get; set; } = null!;

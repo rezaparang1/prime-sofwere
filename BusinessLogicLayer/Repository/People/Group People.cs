@@ -44,25 +44,36 @@ namespace BusinessLogicLayer.Repository.People
             return await _genericService.AddWithLogAsync(async, log, userId);
         }
 
-        public async Task<Result> Update(Group_People async, int userId)
+        public async Task<Result> Update(Group_People entity, int userId)
         {
-            if (string.IsNullOrWhiteSpace(async.Name))
+            if (string.IsNullOrWhiteSpace(entity.Name))
                 return Result.Failure("نام گروه شخص نمی‌تواند خالی باشد.");
 
-            var existing = await _grouppeopleRepo.GetByIdAsync(async.Id);
+            var existing = await _grouppeopleRepo.GetByIdAsync(entity.Id);
             if (existing == null)
                 return Result.Failure("گروه شخص یافت نشد.");
 
+            // بررسی تکراری بودن نام (به جز خودش)
             var duplicate = (await _grouppeopleRepo
-                .FindAsync(b => b.Name == async.Name && b.Id != async.Id))
+                .FindAsync(b => b.Name == entity.Name && b.Id != entity.Id))
                 .Any();
 
             if (duplicate)
-                return Result.Failure("این نام قبلاً ثبت شده است.");
+                return Result.Failure("این گروه شخص قبلاً ثبت شده است.");
 
-            string log = $"ویرایش گروه شخص از '{existing.Name}' به '{async.Name}'";
-            return await _genericService.UpdateWithLogAsync(async, log, userId);
+            // ذخیره نام قدیمی برای لاگ
+            string oldName = existing.Name;
+
+            // به‌روزرسانی خواص مجاز (در اینجا فقط Name، در صورت نیاز سایر خواص را نیز اضافه کنید)
+            existing.Name = entity.Name;
+
+            // ساختن متن لاگ
+            string log = $"ویرایش گروه شخص  از '{oldName}' به '{entity.Name}'";
+
+            // استفاده از نمونه ردیابی‌شده (existing) به جای entity
+            return await _genericService.UpdateWithLogAsync(existing, log, userId);
         }
+
 
         public async Task<Result> Delete(int bankId, int userId)
         {

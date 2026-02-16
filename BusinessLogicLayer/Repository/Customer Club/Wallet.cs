@@ -20,6 +20,31 @@ namespace BusinessLogicLayer.Repository.Customer_Club
             _unitOfWork = unitOfWork;
         }
 
+        public async Task<Result<IEnumerable<WalletTransactionDto>>> SearchTransactionsAsync(
+       string? customerName = null,
+       DateTime? fromDate = null,
+       DateTime? toDate = null,
+       int? customerId = null)
+        {
+            var transactions = await _unitOfWork.Wallets.SearchTransactionsAsync(customerName, fromDate, toDate, customerId);
+
+            var dtos = transactions.Select(t => new WalletTransactionDto
+            {
+                Id = t.Id,
+                Amount = t.Amount,
+                Type = t.Type.ToString(),
+                TransactionDate = t.TransactionDate,
+                Description = t.Description,
+                InvoiceNumber = t.Invoice?.InvoiceNumber,
+                CustomerId = t.Wallet?.CustomerId,
+                CustomerName = t.Wallet?.Customer != null
+                    ? $"{t.Wallet.Customer.FirstName} {t.Wallet.Customer.LastName}"
+                    : null
+            });
+
+            return Result<IEnumerable<WalletTransactionDto>>.Success(dtos);
+        }
+
         public async Task<Result<WalletDto>> GetWalletByCustomerIdAsync(int customerId)
         {
             var wallet = await _unitOfWork.Wallets.GetByCustomerIdAsync(customerId);
@@ -44,14 +69,14 @@ namespace BusinessLogicLayer.Repository.Customer_Club
                 return Result.Failure("کیف پول یافت نشد");
 
             wallet.Balance += amount;
-            wallet.LastUpdate = DateTime.Now;
+            wallet.LastUpdate = DateTime.UtcNow;
 
             var transaction = new WalletTransaction
             {
                 WalletId = wallet.Id,
                 Amount = amount,
                 Type = TransactionType.Deposit,
-                TransactionDate = DateTime.Now,
+                TransactionDate = DateTime.UtcNow,
                 Description = description,
                 InvoiceId = invoiceId
             };
@@ -76,14 +101,14 @@ namespace BusinessLogicLayer.Repository.Customer_Club
                 return Result.Failure("موجودی کیف پول کافی نیست");
 
             wallet.Balance -= amount;
-            wallet.LastUpdate = DateTime.Now;
+            wallet.LastUpdate = DateTime.UtcNow;
 
             var transaction = new WalletTransaction
             {
                 WalletId = wallet.Id,
                 Amount = -amount,
                 Type = TransactionType.Withdraw,
-                TransactionDate = DateTime.Now,
+                TransactionDate = DateTime.UtcNow,
                 Description = description,
                 InvoiceId = invoiceId
             };
@@ -102,14 +127,14 @@ namespace BusinessLogicLayer.Repository.Customer_Club
                 return Result.Failure("کیف پول یافت نشد");
 
             wallet.Balance += amount;
-            wallet.LastUpdate = DateTime.Now;
+            wallet.LastUpdate = DateTime.UtcNow;
 
             var transaction = new WalletTransaction
             {
                 WalletId = wallet.Id,
                 Amount = amount,
                 Type = TransactionType.Refund,
-                TransactionDate = DateTime.Now,
+                TransactionDate = DateTime.UtcNow,
                 Description = description,
                 InvoiceId = invoiceId,
                 ClubDiscountId = clubDiscountId

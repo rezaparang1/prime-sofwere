@@ -8,7 +8,7 @@ namespace BusinessLogicLayer.DTO
 {
     public class InvoiceCreateDto
     {
-        public DateTime Date { get; set; } = DateTime.Now;
+        public DateTime Date { get; set; } = DateTime.UtcNow;
         public int PeopleId { get; set; }          // خریدار اصلی (اجباری)
         public int? CustomerId { get; set; }       // عضو باشگاه (اختیاری)
         public int UserId { get; set; }
@@ -20,5 +20,7 @@ namespace BusinessLogicLayer.DTO
         public int UsedWalletAmount { get; set; } = 0;
         public List<InvoiceItemCreateDto> Items { get; set; } = new();
         public List<PaymentDetailDto> Payments { get; set; } = new();
+
+        public int? TempInvoiceId { get; set; }
     }
 }

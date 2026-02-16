@@ -24,7 +24,7 @@ namespace BusinessEntity.Customer_Club
         public string? ManagerName { get; set; }
 
         public bool IsActive { get; set; } = true;
-        public DateTime RegisterDate { get; set; } = DateTime.Now;
+        public DateTime RegisterDate { get; set; } = DateTime.UtcNow;
 
         // Navigation Properties
         public virtual ICollection<Customer>? Customers { get; set; }

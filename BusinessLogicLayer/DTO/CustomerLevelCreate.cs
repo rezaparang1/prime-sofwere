@@ -8,7 +8,7 @@ namespace BusinessLogicLayer.DTO
 {
     public class CustomerLevelCreateDto
     {
-        public string Name { get; set; } = string.Empty;
+        public string Name { get; set; }
         public string? Description { get; set; }
         public int MinPoints { get; set; }
         public int? MaxPoints { get; set; }

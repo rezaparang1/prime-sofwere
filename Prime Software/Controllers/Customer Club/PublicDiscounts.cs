@@ -60,7 +60,7 @@ namespace Prime_Software.Controllers.Customer_Club
             [FromQuery] int storeId,
             [FromQuery] DateTime? purchaseTime = null)
         {
-            var time = purchaseTime ?? DateTime.Now;
+            var time = purchaseTime ?? DateTime.UtcNow;
             var result = await _publicDiscountService.CalculatePublicDiscountAsync(barcode, time, storeId);
             return Ok(new
             {

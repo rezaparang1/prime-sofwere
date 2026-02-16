@@ -15,6 +15,38 @@ namespace DataAccessLayer.Repository.Customer_Club
         {
         }
 
+        public async Task<IEnumerable<WalletTransaction>> SearchTransactionsAsync(
+    string? customerName = null,
+    DateTime? fromDate = null,
+    DateTime? toDate = null,
+    int? customerId = null)
+        {
+            var query = _context.WalletTransaction
+                .Include(t => t.Wallet)
+                    .ThenInclude(w => w.Customer)
+                .Include(t => t.Invoice)
+                .AsQueryable();
+
+            // فیلتر بر اساس شناسه مشتری (دقیق)
+            if (customerId.HasValue)
+            {
+                query = query.Where(t => t.Wallet.CustomerId == customerId.Value);
+            }
+            // فیلتر بر اساس نام مشتری (جزئی)
+            else if (!string.IsNullOrWhiteSpace(customerName))
+            {
+                query = query.Where(t =>
+                    (t.Wallet.Customer.FirstName + " " + t.Wallet.Customer.LastName).Contains(customerName));
+            }
+
+            // فیلتر بر اساس بازه تاریخ
+            if (fromDate.HasValue)
+                query = query.Where(t => t.TransactionDate >= fromDate.Value);
+            if (toDate.HasValue)
+                query = query.Where(t => t.TransactionDate <= toDate.Value);
+
+            return await query.OrderByDescending(t => t.TransactionDate).ToListAsync();
+        }
         public async Task<Wallet?> GetByCustomerIdAsync(int customerId)
         {
             return await _dbSet

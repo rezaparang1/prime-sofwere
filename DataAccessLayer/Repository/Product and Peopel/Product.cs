@@ -8,89 +8,6 @@ using Microsoft.Extensions.Logging;
 namespace DataAccessLayer.Repository.Product
 {
    
-    //    //*****SEARCH*****
-    //    public async Task<BusinessEntity.ProductDto?> GetProductByBarcodeAsync(string barcode)
-    //    {
-    //        var productUnit = await _context.ProductBarcodes
-    //            .Include(pb => pb.ProductUnit)
-    //                .ThenInclude(u => u.Product)
-    //            .Include(pb => pb.ProductUnit)
-    //                .ThenInclude(u => u.Prices)
-    //                    .ThenInclude(p => p.PriceLevel)
-    //            .Include(pb => pb.ProductUnit)
-    //                .ThenInclude(u => u.Barcodes)
-    //            .FirstOrDefaultAsync(pb => pb.Barcode == barcode);
-
-    //        if (productUnit == null)
-    //            return null;
-
-    //        var unit = productUnit.ProductUnit;
-    //        var product = unit.Product;
-
-    //        return new BusinessEntity.ProductDto
-    //        {
-    //            ProductId = product.Id,
-    //            ProductName = product.Name,
-    //            UnitId = unit.Id,
-    //            UnitProductId = unit.UnitProductId,
-    //            UnitConversionFactor = unit.ConversionFactor,
-    //            Barcodes = unit.Barcodes.Select(b => b.Barcode).ToList(),
-    //            Prices = unit.Prices.Select(p => new BusinessEntity.PriceDto
-    //            {
-    //                PriceLevelId = p.PriceLevelId,
-    //                PriceLevelName = p.PriceLevel.Name,
-    //                BuyPrice = p.BuyPrice,
-    //                Profit = p.Profit,
-    //                SalePrice = p.SalePrice
-    //            }).ToList()
-    //        };
-    //    }
-    //    public async Task<List<BusinessEntity.Product.Product>> SearchbyButtonProducts()
-    //    {
-    //        _logger.LogInformation("Searching for Aync:IsButton and IsActive ");
-    //        var query = _context.Product.AsQueryable();
-    //        query = query.Where(r => r.IsIsButton == true || r.IsActive == true);
-    //        var result = await query.ToListAsync();
-
-    //        _logger.LogInformation("{Count} results found for search Aync: IsButton and IsActive", result.Count);
-    //        return result;
-    //    }
-    //    public async Task<BusinessEntity.Product.Product?> GetByShortcutKey(string? ShortcutKey)
-    //    {
-    //        _logger.LogInformation("Searching for Barcode: {ShortcutKey}", ShortcutKey);
-    //        var query = _context.Product.AsQueryable();
-    //        if (!string.IsNullOrEmpty(ShortcutKey))
-    //        {
-    //            query = query.Where(r => r.ShortcutKey == ShortcutKey);
-    //        }
-    //        var result = await
-    //            query.SingleAsync();
-
-    //        _logger.LogInformation(" results found for search ShortcutKey: {ShortcutKey}", ShortcutKey);
-    //        return result;
-    //    }
-    //    //******READ*******
-    //    public async Task<IEnumerable<BusinessEntity.Product.ProductReportDto>> GetProductReport()
-    //    {
-    //        _logger.LogInformation("Product report generation started.");
-
-    //        var result = await _context.Product
-    //            .SelectMany(p => p.Units, (p, u) => new { Product = p, Unit = u })
-    //            .SelectMany(pu => pu.Unit.Barcodes, (pu, b) => new { pu.Product, pu.Unit, Barcode = b })
-    //            .SelectMany(pub => pub.Unit.Prices, (pub, price) => new ProductReportDto
-    //            {
-    //                Barcode = pub.Barcode.Barcode,
-    //                ProductName = pub.Product.Name,
-    //                Inventory = pub.Product.Inventory,
-    //                BuyPrice = price.BuyPrice,
-    //                SalePrice = price.SalePrice
-    //            })
-    //            .ToListAsync();
-
-    //        _logger.LogInformation("{Count} product report records retrieved.", result.Count);
-
-    //        return result;
-    //    } 
     public class ProductRepository : IProductRepository
     {
         private readonly Database _context;
@@ -102,6 +19,76 @@ namespace DataAccessLayer.Repository.Product
             _logger = logger;
         }
 
+        public async Task<List<BusinessEntity.Product.Product>> GetActiveProductsWithShortcutKeyAsync()
+        {
+            return await _context.Product
+                .Include(p => p.TypeProduct)
+                .Include(p => p.Unit_Product)
+                .Include(p => p.SectionProduct)
+                .Include(p => p.GroupProduct)
+                .Include(p => p.Units)
+                    .ThenInclude(u => u.UnitProduct)
+                .Include(p => p.Units)
+                    .ThenInclude(u => u.Barcodes)
+                .Include(p => p.Units)
+                    .ThenInclude(u => u.Prices)
+                .Where(p => !p.IsDelete && p.IsActive && !string.IsNullOrEmpty(p.ShortcutKey))
+                .OrderBy(p => p.Name)
+                .ToListAsync();
+        }
+        public async Task<List<BusinessEntity.Product.Product>> GetActiveButtonProductsAsync()
+        {
+            return await _context.Product
+                .Include(p => p.TypeProduct)
+                .Include(p => p.Unit_Product)
+                .Include(p => p.SectionProduct)
+                .Include(p => p.GroupProduct)
+                .Include(p => p.Units)
+                    .ThenInclude(u => u.UnitProduct)
+                .Include(p => p.Units)
+                    .ThenInclude(u => u.Barcodes)
+                .Include(p => p.Units)
+                    .ThenInclude(u => u.Prices)
+                .Where(p => !p.IsDelete && p.IsActive && p.IsIsButton)
+                .OrderBy(p => p.Name)
+                .ToListAsync();
+        }
+
+        public async Task<List<BusinessEntity.Product.Product>> GetActiveWeightyProductsAsync()
+        {
+            return await _context.Product
+                .Include(p => p.TypeProduct)
+                .Include(p => p.Unit_Product)
+                .Include(p => p.SectionProduct)
+                .Include(p => p.GroupProduct)
+                .Include(p => p.Units)
+                    .ThenInclude(u => u.UnitProduct)
+                .Include(p => p.Units)
+                    .ThenInclude(u => u.Barcodes)
+                .Include(p => p.Units)
+                    .ThenInclude(u => u.Prices)
+                .Where(p => !p.IsDelete && p.IsActive && p.IsWeighty)
+                .OrderBy(p => p.Name)
+                .ToListAsync();
+        }
+
+        public async Task<List<BusinessEntity.Product.Product>> GetActiveBarcodeProductsAsync()
+        {
+            return await _context.Product
+                .Include(p => p.TypeProduct)
+                .Include(p => p.Unit_Product)
+                .Include(p => p.SectionProduct)
+                .Include(p => p.GroupProduct)
+                .Include(p => p.Units)
+                    .ThenInclude(u => u.UnitProduct)
+                .Include(p => p.Units)
+                    .ThenInclude(u => u.Barcodes)
+                .Include(p => p.Units)
+                    .ThenInclude(u => u.Prices)
+                .Where(p => !p.IsDelete && p.IsActive && p.IsBarcode)
+                .OrderBy(p => p.Name)
+                .ToListAsync();
+        }
         public async Task<IEnumerable<ProductSalesByDateDto>> GetProductSalesReportByDateAsync(DateTime startDate, DateTime endDate, string? barcode = null)
         {
             _logger.LogInformation(
@@ -331,7 +318,7 @@ namespace DataAccessLayer.Repository.Product
                 }
 
                 // تنظیم تاریخ
-                product.Date = DateTime.Now;
+                product.Date = DateTime.UtcNow;
                 product.IsDelete = false;
 
                 // تنظیم ارتباطات

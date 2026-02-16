@@ -44,7 +44,6 @@ namespace BusinessLogicLayer.Repository.Fund
             string log = $"ثبت بانک با نام {entity.Name}";
             return await _genericService.AddWithLogAsync(entity, log, userId);
         }
-
         public async Task<Result> Update(Definition_Bank entity, int userId)
         {
             if (string.IsNullOrWhiteSpace(entity.Name))
@@ -54,6 +53,7 @@ namespace BusinessLogicLayer.Repository.Fund
             if (existing == null)
                 return Result.Failure("بانک یافت نشد.");
 
+            // بررسی تکراری بودن نام (به جز خودش)
             var duplicate = (await _bankRepo
                 .FindAsync(b => b.Name == entity.Name && b.Id != entity.Id))
                 .Any();
@@ -61,10 +61,18 @@ namespace BusinessLogicLayer.Repository.Fund
             if (duplicate)
                 return Result.Failure("این نام بانک قبلاً ثبت شده است.");
 
-            string log = $"ویرایش بانک از '{existing.Name}' به '{entity.Name}'";
-            return await _genericService.UpdateWithLogAsync(entity, log, userId);
-        }
+            // ذخیره نام قدیمی برای لاگ
+            string oldName = existing.Name;
 
+            // به‌روزرسانی خواص مجاز (در اینجا فقط Name، در صورت نیاز سایر خواص را نیز اضافه کنید)
+            existing.Name = entity.Name;
+
+            // ساختن متن لاگ
+            string log = $"ویرایش بانک از '{oldName}' به '{entity.Name}'";
+
+            // استفاده از نمونه ردیابی‌شده (existing) به جای entity
+            return await _genericService.UpdateWithLogAsync(existing, log, userId);
+        }
         public async Task<Result> Delete(int id, int userId)
         {
             var bank = await _bankRepo.GetByIdAsync(id);

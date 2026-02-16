@@ -6,12 +6,12 @@ using System.Threading.Tasks;
 
 namespace BusinessLogicLayer.DTO
 {
-    public class InvoiceItemDto
+    public class InvoiceItem
     {
-        public string Barcode { get; set; } = string.Empty;
+        public string Barcode { get; set; }
         public int ProductId { get; set; }
-        public string ProductName { get; set; } = string.Empty;
-        public string UnitName { get; set; } = string.Empty;
+        public string ProductName { get; set; }
+        public string UnitName { get; set; }
         public int Quantity { get; set; }
         public int UnitPrice { get; set; }
         public int OriginalPrice { get; set; }

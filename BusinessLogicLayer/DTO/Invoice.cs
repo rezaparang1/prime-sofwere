@@ -22,7 +22,7 @@ namespace BusinessLogicLayer.DTO
         public int UsedWalletAmount { get; set; }
         public int FinalAmount { get; set; }
         public int EarnedPoints { get; set; }
-        public List<InvoiceItemDto> Items { get; set; } = new();
+        public List<InvoiceItem> Items { get; set; } = new();
         public List<WalletTransactionDto> WalletTransactions { get; set; } = new();
         public List<PointTransactionDto> PointTransactions { get; set; } = new();
     }

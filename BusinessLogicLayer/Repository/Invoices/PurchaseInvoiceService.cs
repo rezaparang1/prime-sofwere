@@ -201,7 +201,7 @@ namespace BusinessLogicLayer.Repository.Invoices
 
         private string GenerateInvoiceNumber()
         {
-            return $"PUR-{DateTime.Now:yyyyMMddHHmmss}-{new Random().Next(1000, 9999)}";
+            return $"PUR-{DateTime.UtcNow:yyyyMMddHHmmss}-{new Random().Next(1000, 9999)}";
         }
 
         private async Task CreateTransaction(int accountId, long amount, string type, string description)
@@ -212,7 +212,7 @@ namespace BusinessLogicLayer.Repository.Invoices
                 Amount = amount,
                 Type = type,
                 Description = description,
-                Date = DateTime.Now
+                Date = DateTime.UtcNow
             };
             await _unitOfWork.Transactions.AddAsync(transaction);
         }

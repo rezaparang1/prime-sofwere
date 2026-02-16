@@ -17,11 +17,34 @@ namespace Prime_Software.Controllers.Customer_Club
             _clubDiscountService = clubDiscountService;
         }
 
+        [HttpGet("search")]
+        public async Task<IActionResult> Search([FromQuery] ClubDiscountSearchDto searchDto)
+        {
+            var result = await _clubDiscountService.SearchDiscountsAsync(searchDto);
+            if (!result.IsSuccess)
+                return BadRequest(new { success = false, message = result.Message });
+
+            return Ok(new { success = true, data = result.Data });
+        }
+
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] ClubDiscountCreateDto dto)
         {
             var result = await _clubDiscountService.CreateClubDiscountAsync(dto);
             if (!result.IsSuccess)                          // ✅ اصلاح Success به IsSuccess
+                return BadRequest(new { success = false, message = result.Message });
+
+            return Ok(new { success = true, data = result.Data, message = result.Message });
+        }
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(int id, [FromBody] ClubDiscountUpdateDto dto)
+        {
+            if (id != dto.Id)
+                return BadRequest(new { success = false, message = "شناسه مسیر با شناسه بدنه مطابقت ندارد" });
+
+            var result = await _clubDiscountService.UpdateClubDiscountAsync(dto);
+            if (!result.IsSuccess)
                 return BadRequest(new { success = false, message = result.Message });
 
             return Ok(new { success = true, data = result.Data, message = result.Message });

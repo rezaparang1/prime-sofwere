@@ -161,7 +161,8 @@ void ConfigureDependencies()
     builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
     builder.Services.AddScoped<IPurchaseInvoiceService, PurchaseInvoiceService>();
-
+    builder.Services.AddScoped<ISalesReturnService, SalesReturnService>();
+    builder.Services.AddScoped<IPurchaseReturnService, PurchaseReturnService>();
     // ================= Generic Service (BLL) =================
     builder.Services.AddScoped(typeof(IGenericService<>), typeof(GenericService<>));
 
@@ -214,12 +215,15 @@ void ConfigureDependencies()
 
     // ================= Reminder Service =================
     builder.Services.AddScoped<IReminderRepository, ReminderRepository>();
-   // builder.Services.AddScoped<IReminderService, ReminderService>();
+    // builder.Services.AddScoped<IReminderService, ReminderService>();
 
+    builder.Services.AddMemoryCache(); // ????? MemoryCache ?? ????? ????
+    builder.Services.AddScoped<ITempInvoiceService, TempInvoiceService>();
     // ================= Storeroom Product Service =================
     builder.Services.AddScoped<IStoreroomProductRepository, StoreroomProductRepository>();
     builder.Services.AddScoped<IStoreroomProductService, StoreroomProductService>();
 
+    builder.Services.AddSignalR();
     // ================= Form Options for File Upload =================
     builder.Services.Configure<FormOptions>(options =>
     {

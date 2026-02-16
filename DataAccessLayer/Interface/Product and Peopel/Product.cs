@@ -17,11 +17,10 @@ namespace DataAccessLayer.Interface.Product
        DateTime endDate,
        string? barcode = null);
         Task<IEnumerable<ProductInventoryDto>> GetProductInventoryAsync(string? barcode = null);
-        //Task<List<BusinessEntity.Product.Product>> SearchbyButtonProducts();
-
-        //Task<BusinessEntity.Product.Product?> GetProductByBarcode(string? Barcode);
-        //Task<BusinessEntity.Product.Product?> GetByShortcutKey(string? ShortcutKey);
-        //Task<IEnumerable<ProductReportDto>> GetProductReport();     
+        Task<List<BusinessEntity.Product.Product>> GetActiveButtonProductsAsync();
+        Task<List<BusinessEntity.Product.Product>> GetActiveWeightyProductsAsync();
+        Task<List<BusinessEntity.Product.Product>> GetActiveBarcodeProductsAsync();
+        Task<List<BusinessEntity.Product.Product>> GetActiveProductsWithShortcutKeyAsync();
         Task<List<BusinessEntity.Product.Product>> Search(
         string? name = null,
         string? barcode = null,

@@ -25,7 +25,7 @@ namespace BusinessLogicLayer.Repository
             var log = new LogUser
             {
                 Description = description,
-                Date = DateTime.Now,
+                Date = DateTime.UtcNow,
                 UserId = userId
             };
 

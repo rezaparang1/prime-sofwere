@@ -9,6 +9,11 @@ namespace DataAccessLayer.Interface.Customer_Club
 {
     public interface IWalletRepository : IRepository<Wallet>
     {
+        Task<IEnumerable<WalletTransaction>> SearchTransactionsAsync(
+    string? customerName = null,
+    DateTime? fromDate = null,
+    DateTime? toDate = null,
+    int? customerId = null);
         Task<Wallet?> GetByCustomerIdAsync(int customerId);
         Task<Wallet?> GetWithTransactionsAsync(int id);
         Task<decimal> GetBalanceAsync(int customerId);

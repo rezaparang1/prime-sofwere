@@ -44,26 +44,35 @@ namespace BusinessLogicLayer.Repository.Product
             return await _genericService.AddWithLogAsync(async, log, userId);
         }
 
-        public async Task<Result> Update(Type_Product async, int userId)
+        public async Task<Result> Update(Type_Product entity, int userId)
         {
-            if (string.IsNullOrWhiteSpace(async.Name))
-                return Result.Failure("نام نوع کالا نمی‌تواند خالی باشد.");
+            if (string.IsNullOrWhiteSpace(entity.Name))
+                return Result.Failure("نام نوع کالا  نمی‌تواند خالی باشد.");
 
-            var existing = await _typeproductRepo.GetByIdAsync(async.Id);
+            var existing = await _typeproductRepo.GetByIdAsync(entity.Id);
             if (existing == null)
                 return Result.Failure("نوع کالا یافت نشد.");
 
+            // بررسی تکراری بودن نام (به جز خودش)
             var duplicate = (await _typeproductRepo
-                .FindAsync(b => b.Name == async.Name && b.Id != async.Id))
+                .FindAsync(b => b.Name == entity.Name && b.Id != entity.Id))
                 .Any();
 
             if (duplicate)
-                return Result.Failure("این نام قبلاً ثبت شده است.");
+                return Result.Failure("این نام نوع کالا قبلاً ثبت شده است.");
 
-            string log = $"ویرایش نوع کالا از '{existing.Name}' به '{async.Name}'";
-            return await _genericService.UpdateWithLogAsync(async, log, userId);
+            // ذخیره نام قدیمی برای لاگ
+            string oldName = existing.Name;
+
+            // به‌روزرسانی خواص مجاز (در اینجا فقط Name، در صورت نیاز سایر خواص را نیز اضافه کنید)
+            existing.Name = entity.Name;
+
+            // ساختن متن لاگ
+            string log = $"ویرایش نوع کالا از '{oldName}' به '{entity.Name}'";
+
+            // استفاده از نمونه ردیابی‌شده (existing) به جای entity
+            return await _genericService.UpdateWithLogAsync(existing, log, userId);
         }
-
         public async Task<Result> Delete(int bankId, int userId)
         {
             var bank = await _typeproductRepo.GetByIdAsync(bankId);

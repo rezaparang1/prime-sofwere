@@ -16,6 +16,44 @@ namespace BusinessLogicLayer.Repository.Customer_Club
             _unitOfWork = unitOfWork;
         }
 
+        public async Task<Result<List<CustomerDto>>> SearchCustomersAsync(
+      string? firstName = null,
+      string? lastName = null,
+      int? customerLevelId = null,
+      int? minPoints = null,
+      int? maxPoints = null,
+      string? barcode = null)
+        {
+            try
+            {
+                var customers = await _unitOfWork.Customers.FindAsync(
+                    c =>
+                        (string.IsNullOrEmpty(firstName) || c.FirstName.Contains(firstName)) &&
+                        (string.IsNullOrEmpty(lastName) || c.LastName.Contains(lastName)) &&
+                        (!customerLevelId.HasValue || c.CustomerLevelId == customerLevelId) &&
+                        (!minPoints.HasValue || c.CurrentPoints >= minPoints) &&
+                        (!maxPoints.HasValue || c.CurrentPoints <= maxPoints) &&
+                        (string.IsNullOrEmpty(barcode) || c.Barcode == barcode),
+                    default,
+                    c => c.Wallet,
+                    c => c.CustomerLevel,
+                    c => c.People
+                );
+
+                var result = new List<CustomerDto>();
+                foreach (var customer in customers)
+                {
+                    result.Add(await MapToDto(customer));
+                }
+
+                return Result<List<CustomerDto>>.Success(result);
+            }
+            catch (Exception ex)
+            {
+                
+                return Result<List<CustomerDto>>.Failure("خطا در انجام جستجو");
+            }
+        }
         public async Task<Result<CustomerDto>> RegisterCustomerAsync(CustomerRegisterDto dto)
         {
             // اعتبارسنجی
@@ -38,7 +76,7 @@ namespace BusinessLogicLayer.Repository.Customer_Club
                 Mobile = dto.Mobile,
                 Email = dto.Email,
                 Barcode = barcodeResult.Data,
-                RegisterDate = DateTime.Now,
+                RegisterDate = DateTime.UtcNow,
                 IsActive = true,
                 IsClubMember = dto.RegisterInClub,
                 StoreId = dto.StoreId,
@@ -57,7 +95,7 @@ namespace BusinessLogicLayer.Repository.Customer_Club
                 {
                     CustomerId = customer.Id,
                     Balance = 0,
-                    LastUpdate = DateTime.Now
+                    LastUpdate = DateTime.UtcNow
                 };
                 await _unitOfWork.Wallets.AddAsync(wallet);
                 await _unitOfWork.SaveChangesAsync();
@@ -74,7 +112,7 @@ namespace BusinessLogicLayer.Repository.Customer_Club
             int attempts = 0;
             do
             {
-                barcode = $"C{DateTime.Now:yyMMddHHmmss}{new Random().Next(100, 999)}";
+                barcode = $"C{DateTime.UtcNow:yyMMddHHmmss}{new Random().Next(100, 999)}";
                 exists = await _unitOfWork.Customers.IsBarcodeExistsAsync(barcode);
                 attempts++;
             } while (exists && attempts < 10);
@@ -127,10 +165,10 @@ namespace BusinessLogicLayer.Repository.Customer_Club
                 CustomerId = customerId,
                 Points = points,
                 Type = points > 0 ? PointTransactionType.Earn : PointTransactionType.Redeem,
-                TransactionDate = DateTime.Now,
+                TransactionDate = DateTime.UtcNow,
                 Description = description,
                 InvoiceId = invoiceId,
-                ExpireDate = points > 0 ? DateTime.Now.AddMonths(6) : null
+                ExpireDate = points > 0 ? DateTime.UtcNow.AddMonths(6) : null
             };
 
             await _unitOfWork.PointTransactions.AddAsync(pointTransaction);
@@ -167,7 +205,7 @@ namespace BusinessLogicLayer.Repository.Customer_Club
                     .FindAsync(clh => clh.CustomerId == customerId && clh.ToDate == null);
                 foreach (var history in currentHistory)
                 {
-                    history.ToDate = DateTime.Now;
+                    history.ToDate = DateTime.UtcNow;
                     _unitOfWork.CustomerLevelHistories.Update(history);
                 }
 
@@ -175,7 +213,7 @@ namespace BusinessLogicLayer.Repository.Customer_Club
                 {
                     CustomerId = customerId,
                     CustomerLevelId = newLevel.Id,
-                    FromDate = DateTime.Now,
+                    FromDate = DateTime.UtcNow,
                     ToDate = null
                 };
 

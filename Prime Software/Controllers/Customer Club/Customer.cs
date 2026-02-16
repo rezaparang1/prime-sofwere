@@ -19,6 +19,24 @@ namespace Prime_Software.Controllers.Customer_Club
             _walletService = walletService;
         }
 
+        [HttpGet("search")]
+        public async Task<IActionResult> Search(
+     [FromQuery] string? firstName = null,
+     [FromQuery] string? lastName = null,
+     [FromQuery] int? customerLevelId = null,
+     [FromQuery] int? minPoints = null,
+     [FromQuery] int? maxPoints = null,
+     [FromQuery] string? barcode = null)
+        {
+            var result = await _customerService.SearchCustomersAsync(
+                firstName, lastName, customerLevelId, minPoints, maxPoints, barcode);
+
+            if (!result.IsSuccess)
+                return BadRequest(new { success = false, message = result.Message });
+
+            return Ok(new { success = true, data = result.Data });
+        }
+
         [HttpPost("register")]
         [AllowAnonymous]
         public async Task<IActionResult> Register([FromBody] CustomerRegisterDto dto)

@@ -17,6 +17,40 @@ namespace Prime_Software.Controllers.Customer_Club
             _walletService = walletService;
         }
 
+        [HttpGet("search-transactions")]
+        public async Task<IActionResult> SearchTransactions(
+    [FromQuery] string? customerName = null,
+    [FromQuery] DateTime? fromDate = null,
+    [FromQuery] DateTime? toDate = null,
+    [FromQuery] int? customerId = null)
+        {
+            var result = await _walletService.SearchTransactionsAsync(customerName, fromDate, toDate, customerId);
+            if (!result.IsSuccess)
+                return BadRequest(new { success = false, message = result.Message });
+
+            return Ok(new { success = true, data = result.Data });
+        }
+
+        [HttpPost("deposit")] 
+        public async Task<IActionResult> Deposit([FromBody] DepositDto dto)
+        {
+            var result = await _walletService.DepositAsync(dto.CustomerId, dto.Amount, dto.Description);
+            if (!result.IsSuccess)
+                return BadRequest(new { success = false, message = result.Message });
+
+            return Ok(new { success = true, message = result.Message });
+        }
+
+        [HttpPost("withdraw")]   
+        public async Task<IActionResult> Withdraw([FromBody] WithdrawDto dto)
+        {
+            var result = await _walletService.WithdrawAsync(dto.CustomerId, dto.Amount, dto.Description);
+            if (!result.IsSuccess)
+                return BadRequest(new { success = false, message = result.Message });
+
+            return Ok(new { success = true, message = result.Message });
+        }
+
         [HttpGet("{customerId}")]
         public async Task<IActionResult> GetWallet(int customerId)
         {
@@ -44,15 +78,6 @@ namespace Prime_Software.Controllers.Customer_Club
             return Ok(new { success = true, data = result.Data });
         }
 
-        [HttpPost("deposit")]
-        [Authorize(Roles = "Admin,Manager")]
-        public async Task<IActionResult> Deposit([FromBody] DepositDto dto)
-        {
-            var result = await _walletService.DepositAsync(dto.CustomerId, dto.Amount, dto.Description);
-            if (!result.IsSuccess)                          // ✅ اصلاح Success به IsSuccess
-                return BadRequest(new { success = false, message = result.Message });
-
-            return Ok(new { success = true, message = result.Message });
-        }
+       
     }
 }

@@ -43,25 +43,34 @@ namespace BusinessLogicLayer.Repository.Settings
             string log = $"ثبت گروه کاربری با نام {aync.Name}";
             return await _genericService.AddWithLogAsync(aync, log, userId);
         }
-
-        public async Task<Result> Update(Group_User aync, int userId)
+        public async Task<Result> Update(Group_User entity, int userId)
         {
-            if (string.IsNullOrWhiteSpace(aync.Name))
+            if (string.IsNullOrWhiteSpace(entity.Name))
                 return Result.Failure("نام گروه کاربری نمی‌تواند خالی باشد.");
 
-            var existingBank = await _groupuserRepo.GetByIdAsync(aync.Id);
-            if (existingBank == null)
+            var existing = await _groupuserRepo.GetByIdAsync(entity.Id);
+            if (existing == null)
                 return Result.Failure("گروه کاربری یافت نشد.");
 
+            // بررسی تکراری بودن نام (به جز خودش)
             var duplicate = (await _groupuserRepo
-                .FindAsync(b => b.Name == aync.Name && b.Id != aync.Id))
+                .FindAsync(b => b.Name == entity.Name && b.Id != entity.Id))
                 .Any();
 
             if (duplicate)
-                return Result.Failure("این نام گروه کاربری قبلاً ثبت شده است.");
+                return Result.Failure("این گروه کاربری قبلاً ثبت شده است.");
 
-            string log = $"ویرایش گروه کاربری از '{existingBank.Name}' به '{aync.Name}'";
-            return await _genericService.UpdateWithLogAsync(aync, log, userId);
+            // ذخیره نام قدیمی برای لاگ
+            string oldName = existing.Name;
+
+            // به‌روزرسانی خواص مجاز (در اینجا فقط Name، در صورت نیاز سایر خواص را نیز اضافه کنید)
+            existing.Name = entity.Name;
+
+            // ساختن متن لاگ
+            string log = $"ویرایش گروه کاربری از '{oldName}' به '{entity.Name}'";
+
+            // استفاده از نمونه ردیابی‌شده (existing) به جای entity
+            return await _genericService.UpdateWithLogAsync(existing, log, userId);
         }
 
         public async Task<Result> Delete(int ayncId, int userId)

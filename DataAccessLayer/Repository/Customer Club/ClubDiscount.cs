@@ -19,7 +19,7 @@ namespace DataAccessLayer.Repository.Customer_Club
 
         public async Task<IEnumerable<ClubDiscount>> GetActiveDiscountsAsync(int storeId)
         {
-            var now = DateTime.Now;
+            var now = DateTime.UtcNow;
             return await _dbSet
                 .Where(cd => cd.StoreId == storeId &&
                              cd.IsActive &&
@@ -31,7 +31,7 @@ namespace DataAccessLayer.Repository.Customer_Club
 
         public async Task<IEnumerable<ClubDiscount>> GetActiveDiscountsWithProductsAsync(int storeId)
         {
-            var now = DateTime.Now;
+            var now = DateTime.UtcNow;
             return await _dbSet
                 .Include(cd => cd.Products)
                     .ThenInclude(p => p.Product)
@@ -95,11 +95,11 @@ namespace DataAccessLayer.Repository.Customer_Club
 
         public async Task<IEnumerable<ClubDiscount>> GetExpiringDiscountsAsync(int daysBeforeExpiration)
         {
-            var targetDate = DateTime.Now.AddDays(daysBeforeExpiration);
+            var targetDate = DateTime.UtcNow.AddDays(daysBeforeExpiration);
             return await _dbSet
                 .Where(cd => cd.IsActive &&
                              cd.EndDate <= targetDate &&
-                             cd.EndDate >= DateTime.Now)
+                             cd.EndDate >= DateTime.UtcNow)
                 .ToListAsync();
         }
 

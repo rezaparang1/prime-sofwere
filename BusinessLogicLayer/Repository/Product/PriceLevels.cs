@@ -44,26 +44,35 @@ namespace BusinessLogicLayer.Repository.Product
             return await _genericService.AddWithLogAsync(async, log, userId);
         }
 
-        public async Task<Result> Update(PriceLevels async, int userId)
+        public async Task<Result> Update(PriceLevels entity, int userId)
         {
-            if (string.IsNullOrWhiteSpace(async.Name))
+            if (string.IsNullOrWhiteSpace(entity.Name))
                 return Result.Failure("نام سطح قیمت نمی‌تواند خالی باشد.");
 
-            var existing = await _pricelevelRepo.GetByIdAsync(async.Id);
+            var existing = await _pricelevelRepo.GetByIdAsync(entity.Id);
             if (existing == null)
-                return Result.Failure(" سطح قیمت یافت نشد.");
+                return Result.Failure("سطح قیمت  یافت نشد.");
 
+            // بررسی تکراری بودن نام (به جز خودش)
             var duplicate = (await _pricelevelRepo
-                .FindAsync(b => b.Name == async.Name && b.Id != async.Id))
+                .FindAsync(b => b.Name == entity.Name && b.Id != entity.Id))
                 .Any();
 
             if (duplicate)
-                return Result.Failure("این نام قبلاً ثبت شده است.");
+                return Result.Failure("این نام سطح قیمت قبلاً ثبت شده است.");
 
-            string log = $"ویرایش سطح قیمت از '{existing.Name}' به '{async.Name}'";
-            return await _genericService.UpdateWithLogAsync(async, log, userId);
+            // ذخیره نام قدیمی برای لاگ
+            string oldName = existing.Name;
+
+            // به‌روزرسانی خواص مجاز (در اینجا فقط Name، در صورت نیاز سایر خواص را نیز اضافه کنید)
+            existing.Name = entity.Name;
+
+            // ساختن متن لاگ
+            string log = $"ویرایش سطح قیمت از '{oldName}' به '{entity.Name}'";
+
+            // استفاده از نمونه ردیابی‌شده (existing) به جای entity
+            return await _genericService.UpdateWithLogAsync(existing, log, userId);
         }
-
         public async Task<Result> Delete(int bankId, int userId)
         {
             var bank = await _pricelevelRepo.GetByIdAsync(bankId);
