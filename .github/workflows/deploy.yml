@@ -1,0 +1,27 @@
+name: Deploy to Server
+
+on:
+  push:
+    branches:
+      - main   # اگر برنچت master هست تغییر بده
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: 185.126.2.237
+          username: parang
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            cd ~/prime-sofwere
+            git pull origin main
+            cd "Prime Software"
+            dotnet publish -c Release -o out
+            sudo systemctl restart prime-software

@@ -95,9 +95,13 @@ using (var scope = app.Services.CreateScope())
     db.Database.Migrate();
 
     var seeder = scope.ServiceProvider.GetRequiredService<DbInitializer>();
-    await seeder.SeedAsync();
-}
 
+    // ??? ?? ???? Development seed ???? ???
+    if (app.Environment.IsDevelopment())
+    {
+        await seeder.SeedAsync();
+    }
+}
 // ================= Middleware Pipeline =================
 ConfigureMiddlewarePipeline();
 

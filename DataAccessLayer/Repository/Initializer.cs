@@ -216,7 +216,7 @@ namespace DataAccessLayer.Repository
                 _db.Add(peopleAccount);
             }
 
-            await _db.SaveChangesAsync(); // Save Accounts قبل از Fund و People
+            await _db.SaveChangesAsync();
 
             // -----------------------
             // Fund
@@ -226,7 +226,10 @@ namespace DataAccessLayer.Repository
                 .FirstOrDefaultAsync(f => f.Name == "مدیر");
 
             if (fund != null)
+            {
                 fund.IsDelete = false;
+                fund.Account = fundAccount; // به‌روزرسانی Account
+            }
             else
             {
                 fund = new BusinessEntity.Fund.Fund
@@ -249,7 +252,15 @@ namespace DataAccessLayer.Repository
                 .FirstOrDefaultAsync(p => p.IdPeople == "1");
 
             if (people != null)
+            {
                 people.IsDelete = false;
+                // به‌روزرسانی وابستگی‌ها
+                people.Group_People = groupPeople;
+                people.Type_People = typePeople1;
+                people.PriceLevel = priceLevels[0];
+                people.Account = peopleAccount;
+                // در صورت نیاز می‌توانید فیلدهای دیگر را نیز مقداردهی کنید
+            }
             else
             {
                 people = new BusinessEntity.People.People
@@ -313,8 +324,12 @@ namespace DataAccessLayer.Repository
                 .FirstOrDefaultAsync(a => a.GroupUserId == groupUser.Id);
 
             if (access != null)
+            {
                 access.IsDelete = false;
+                access.Group_User = groupUser; // به‌روزرسانی گروه کاربری
+            }
             else
+            {
                 _db.Add(new BusinessEntity.Settings.Access_Level
                 {
                     Group_User = groupUser,
@@ -375,6 +390,7 @@ namespace DataAccessLayer.Repository
                     IsCustomerDetailR = true,
                     IsDelete = false
                 });
+            }
 
             await _db.SaveChangesAsync();
 
