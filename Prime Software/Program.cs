@@ -38,6 +38,7 @@ using Serilog;
 using Serilog.Filters;
 using System.Text;
 using System.Threading.RateLimiting;
+using System.Text.Json; // <-- ????? ?? (??? ????)
 
 var builder = WebApplication.CreateBuilder(args);
 var configuration = builder.Configuration;
@@ -64,7 +65,8 @@ ConfigureDependencies();
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
-        options.JsonSerializerOptions.PropertyNamingPolicy = null;
+        // ????? ??? ??: ?? null ?? CamelCase
+        options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
         options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
     });
 
