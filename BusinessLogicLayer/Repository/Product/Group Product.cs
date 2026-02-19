@@ -5,7 +5,7 @@ using BusinessEntity.Product;
 
 namespace BusinessLogicLayer.Repository.Product
 {
-    public class GroupProductService : BusinessLogicLayer.Interface.Producr.IGroupProductService
+    public class GroupProductService : BusinessLogicLayer.Interface.Product.IGroupProductService
     {
         private readonly IRepository<Group_Product> _groupoductRepo;
         private readonly IRepository<BusinessEntity.Product.Product> _productRepo;

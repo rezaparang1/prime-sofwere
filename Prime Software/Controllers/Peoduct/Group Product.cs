@@ -17,11 +17,11 @@ namespace Prime_Software.Controllers.Peoduct
     public class Group_Product : ControllerBase
     {
         private readonly ICurrentUserService _currentUser;
-        private readonly BusinessLogicLayer.Repository.Product.GroupProductService _service;
+        private readonly BusinessLogicLayer.Interface.Product.IGroupProductService _service;
 
         public Group_Product(
             ICurrentUserService currentUser,
-            BusinessLogicLayer.Repository.Product.GroupProductService service)
+            BusinessLogicLayer.Interface.Product.IGroupProductService service)
         {
             _currentUser = currentUser;
             _service = service;

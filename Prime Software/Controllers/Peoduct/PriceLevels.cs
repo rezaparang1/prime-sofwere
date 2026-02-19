@@ -18,11 +18,11 @@ namespace Prime_Software.Controllers.Peoduct
     public class PriceLevels : ControllerBase
     {
         private readonly ICurrentUserService _currentUser;
-        private readonly BusinessLogicLayer.Repository.Product.PricelevelService _service;
+        private readonly BusinessLogicLayer.Interface.Product.IPriceLevelsService _service;
 
         public PriceLevels(
             ICurrentUserService currentUser,
-            BusinessLogicLayer.Repository.Product.PricelevelService service)
+            BusinessLogicLayer.Interface.Product.IPriceLevelsService service)
         {
             _currentUser = currentUser;
             _service = service;

@@ -203,14 +203,14 @@ void ConfigureDependencies()
     builder.Services.AddScoped<IDefinitionBankAccountService, DefinitionBankAccountService>();
 
     // ================= Settings & Definition Services =================
-    builder.Services.AddScoped<IGroupProductService, GroupProductService>();
+    builder.Services.AddScoped<BusinessLogicLayer.Interface.Product.IGroupProductService, GroupProductService>();
     builder.Services.AddScoped<IGroupPeopleService, GroupPeopelService>();
     builder.Services.AddScoped<IGroupUserService, GroupUserService>();
     builder.Services.AddScoped<ITypePeopleService, TypePeopelService>();
     builder.Services.AddScoped<ITypeProductService, TypeProdudtService>();
     builder.Services.AddScoped<ISectionProductService, SectionProductService>();
     builder.Services.AddScoped<IUnitProductService, UnitProdudtService>();
-    builder.Services.AddScoped<IPriceLevelsService, PricelevelService>();
+    builder.Services.AddScoped<BusinessLogicLayer.Interface.Product.IPriceLevelsService, PricelevelService>();
 
     // ================= Customer Club Services =================
     builder.Services.AddScoped<ICustomerService, CustomerService>();
