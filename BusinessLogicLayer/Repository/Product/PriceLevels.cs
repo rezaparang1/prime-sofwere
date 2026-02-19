@@ -5,7 +5,7 @@ using DataAccessLayer.Interface;
 
 namespace BusinessLogicLayer.Repository.Product
 {
-    public class PricelevelService : BusinessLogicLayer.Interface.Product.IPriceLevelsService
+    public class PricelevelService : BusinessLogicLayer.Interface.Producr.IPriceLevelsService
     {
         private readonly IRepository<PriceLevels> _pricelevelRepo;
         private readonly IRepository<BusinessEntity.People.People> _peopelRepo;

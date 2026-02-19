@@ -1,6 +1,6 @@
 ﻿using BusinessEntity.Product;
 
-namespace BusinessLogicLayer.Interface.Product
+namespace BusinessLogicLayer.Interface.Producr
 {
     public interface IGroupProductService
     {
