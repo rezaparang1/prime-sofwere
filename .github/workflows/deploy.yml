@@ -3,7 +3,7 @@ name: Deploy to Server
 on:
   push:
     branches:
-      - main   # اگر برنچت master هست تغییر بده
+      - main
 
 jobs:
   deploy:
@@ -20,11 +20,11 @@ jobs:
           username: parang
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
-            set -e  # اگر هر دستور شکست خورد، اکشن متوقف می‌شود
+            set -e
             cd ~/prime-sofwere
             git fetch --all
             git reset --hard origin/main
             cd "Prime Software"
-            dotnet clean
-            dotnet publish -c Release -o out
+            /usr/share/dotnet/dotnet clean
+            /usr/share/dotnet/dotnet publish -c Release -o out
             sudo systemctl restart prime-software
