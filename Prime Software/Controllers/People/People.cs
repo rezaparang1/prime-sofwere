@@ -49,7 +49,7 @@ namespace Prime_Software.Controllers.People
             return Ok(result);
         }
 
-        [HttpGet("combo")]
+        [HttpGet("getpeople")]
         public async Task<IActionResult> GetPeopleForCombo()
         {
             var result = await _service.GetPeopleForComboAsync();

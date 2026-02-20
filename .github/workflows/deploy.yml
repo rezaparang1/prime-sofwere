@@ -20,8 +20,11 @@ jobs:
           username: parang
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
+            set -e  # اگر هر دستور شکست خورد، اکشن متوقف می‌شود
             cd ~/prime-sofwere
-            git pull origin main
+            git fetch --all
+            git reset --hard origin/main
             cd "Prime Software"
+            dotnet clean
             dotnet publish -c Release -o out
             sudo systemctl restart prime-software
