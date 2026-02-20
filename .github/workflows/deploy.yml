@@ -3,7 +3,7 @@ name: Deploy to Server
 on:
   push:
     branches:
-      - main
+      - main   # اگر برنچت master هست اینو تغییر بده
 
 jobs:
   deploy:
@@ -21,10 +21,16 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
             set -e
+
             cd ~/prime-sofwere
             git fetch --all
             git reset --hard origin/main
+
             cd "Prime Software"
+
+            rm -rf out
+
             /usr/share/dotnet/dotnet clean
             /usr/share/dotnet/dotnet publish -c Release -o out
+
             sudo systemctl restart prime-software
