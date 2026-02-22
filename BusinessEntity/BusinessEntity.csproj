@@ -10,7 +10,6 @@
     <Folder Include="DTO\Customer Club\" />
     <Folder Include="DTO\Financial Operations\" />
     <Folder Include="DTO\Invoices\" />
-    <Folder Include="DTO\Settings\" />
   </ItemGroup>
 
 </Project>

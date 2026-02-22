@@ -33,14 +33,28 @@ namespace DataAccessLayer.Repository.Settings
         }
 
         // ***** GetAll *****
-        public async Task<IEnumerable<User>> GetAll()
+        public async Task<IEnumerable<BusinessEntity.DTO.Settings.UserDto>> GetAll()
         {
-            return await _context.User
+            var users = await _context.User
                 .Include(u => u.People)
                 .Include(u => u.Group_User)
                 .Where(u => !u.IsDelete)
+                .Select(u => new BusinessEntity.DTO.Settings.UserDto
+                {
+                    Id = u.Id,
+                    UserName = u.UserName,
+                    PeopleId = u.PeopleId,
+                    PeopleFullName = u.People != null ? u.People.FirstName + " " + u.People.LastName : null,
+                    GroupUserId = u.GroupUserId,
+                    GroupName = u.Group_User != null ? u.Group_User.Name : null,
+                    IsActive = u.IsActive,
+                    LastActivity = u.LastActivity,
+                    Validity = u.Validity
+                })
                 .OrderBy(u => u.UserName)
                 .ToListAsync();
+
+            return users;
         }
 
         // ***** GetById *****

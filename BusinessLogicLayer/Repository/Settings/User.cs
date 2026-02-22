@@ -42,7 +42,7 @@ namespace BusinessLogicLayer.Repository.Settings
             return await _userRepository.FindByUserNameAndPassword(userName, password);
         }
 
-        public async Task<IEnumerable<User>> GetAll()
+        public async Task<IEnumerable<BusinessEntity.DTO.Settings.UserDto>> GetAll()
         {
             return await _userRepository.GetAll();
         }
