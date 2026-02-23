@@ -37,6 +37,16 @@ namespace Prime_Software.Controllers.Customer_Club
             return Ok(new { success = true, data = result.Data });
         }
 
+        [HttpGet("all")]
+        public async Task<IActionResult> GetAll()
+        {
+            var result = await _customerService.GetAllCustomersAsync();
+            if (!result.IsSuccess)
+                return BadRequest(new { success = false, message = result.Message });
+
+            return Ok(new { success = true, data = result.Data });
+        }
+
         [HttpPost("register")]
         [AllowAnonymous]
         public async Task<IActionResult> Register([FromBody] CustomerRegisterDto dto)

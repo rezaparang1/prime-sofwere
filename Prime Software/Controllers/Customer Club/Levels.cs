@@ -21,11 +21,20 @@ namespace Prime_Software.Controllers.Customer_Club
 
         // GET: api/Levels?storeId=1
         [HttpGet]
-        public async Task<IActionResult> GetAll([FromQuery] int storeId)
+        public async Task<IActionResult> GetAll([FromQuery] int? storeId = null)
         {
-            var levels = await _unitOfWork.CustomerLevels
-                .FindAsync(cl => cl.StoreId == storeId && cl.IsActive);
-            return Ok(new { success = true, data = levels });
+            if (storeId.HasValue)
+            {
+                var levels = await _unitOfWork.CustomerLevels
+                    .FindAsync(cl => cl.StoreId == storeId.Value && cl.IsActive);
+                return Ok(new { success = true, data = levels });
+            }
+            else
+            {
+                var levels = await _unitOfWork.CustomerLevels
+                    .FindAsync(cl => cl.IsActive);
+                return Ok(new { success = true, data = levels });
+            }
         }
 
         // GET: api/Levels/5

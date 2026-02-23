@@ -26,5 +26,6 @@ namespace BusinessLogicLayer.DTO
         public decimal WalletBalance { get; set; }
         public int? PeopleId { get; set; }
         public string? PeopleName { get; set; }
+        public bool IsDelete { get; set; }
     }
 }

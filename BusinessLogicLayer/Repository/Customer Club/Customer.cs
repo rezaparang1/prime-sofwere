@@ -57,6 +57,31 @@ namespace BusinessLogicLayer.Repository.Customer_Club
                 return Result<List<CustomerDto>>.Failure("خطا در انجام جستجو");
             }
         }
+        public async Task<Result<List<CustomerDto>>> GetAllCustomersAsync()
+        {
+            try
+            {
+                var customers = await _unitOfWork.Customers.GetAllAsync(
+                    default,
+                    c => c.Wallet,
+                    c => c.CustomerLevel,
+                    c => c.People
+                );
+
+                var result = new List<CustomerDto>();
+                foreach (var customer in customers.Where(c => !c.IsDelete))
+                {
+                    result.Add(await MapToDto(customer));
+                }
+
+                return Result<List<CustomerDto>>.Success(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "خطا در دریافت همه مشتریان");
+                return Result<List<CustomerDto>>.Failure("خطا در دریافت لیست مشتریان");
+            }
+        }
         public async Task<Result<CustomerDto>> RegisterCustomerAsync(CustomerRegisterDto dto)
         {
             // اعتبارسنجی اولیه

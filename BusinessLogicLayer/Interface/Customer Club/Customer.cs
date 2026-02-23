@@ -12,6 +12,7 @@ namespace BusinessLogicLayer.Interface.Customer_Club
      int? minPoints = null,
      int? maxPoints = null,
      string? barcode = null);
+        Task<Result<List<CustomerDto>>> GetAllCustomersAsync();
         Task<Result<CustomerDto>> RegisterCustomerAsync(CustomerRegisterDto dto);
         Task<Result<CustomerDto>> GetCustomerByBarcodeAsync(string barcode);
         Task<Result<CustomerDto>> GetCustomerByIdAsync(int id);

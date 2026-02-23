@@ -22,6 +22,7 @@ namespace BusinessEntity.Customer_Club
         public string? Barcode { get; set; }  
         public DateTime RegisterDate { get; set; }
         public bool IsActive { get; set; } = true;
+        public bool IsDelete { get; set; } 
         public bool IsClubMember { get; set; } = false;
         public int TotalPoints { get; set; } = 0;
         public int CurrentPoints { get; set; } = 0;
