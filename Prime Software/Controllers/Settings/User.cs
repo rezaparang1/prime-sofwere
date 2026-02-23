@@ -26,7 +26,7 @@ namespace Prime_Software.Controllers.Settings
             _userService = userService;   // مقداردهی سرویس کاربر
             _currentUser = currentUser;    // مقداردهی سرویس کاربر جاری
         }
-
+        //تغییرات
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
