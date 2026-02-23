@@ -1,184 +1,259 @@
 ﻿using BusinessEntity.Settings;
+using BusinessLogicLayer.DTO;
 using BusinessLogicLayer.Interface;
 using BusinessLogicLayer.Interface.Settings;
-using DataAccessLayer;
-using DataAccessLayer.Interface.Settings;
+using DataAccessLayer.Interface;
+using DataAccessLayer.Repository;
 using FluentValidation;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+
 
 namespace BusinessLogicLayer.Repository.Settings
 {
     public class UserService : IUserService
     {
-        private readonly IUserRepository _userRepository;
+        private readonly IUnitOfWork _unitOfWork;
         private readonly ILogService _logService;
-        private readonly Database _context;
         private readonly ILogger<UserService> _logger;
 
-        public UserService(
-            IUserRepository userRepository,
-            ILogService logService,
-            Database context,
-            ILogger<UserService> logger)
+        public UserService(IUnitOfWork unitOfWork, ILogService logService, ILogger<UserService> logger)
         {
-            _userRepository = userRepository;
+            _unitOfWork = unitOfWork;
             _logService = logService;
-            _context = context;
             _logger = logger;
         }
 
-        public async Task<List<UserComboDto>> GetActiveUsersAsync()
+        // دریافت موجودیت کامل کاربر با Include (برای استفاده در Auth)
+        public async Task<User?> GetUserEntityByIdAsync(int id)
         {
-            return await _userRepository.GetActiveUsersAsync();
+            return await _unitOfWork.Users.GetByIdAsync(
+                id,
+                default,
+                u => u.Group_User,
+                u => u.Group_User.AccessLevel);
         }
 
-        public async Task<User?> FindByUserNameAndPassword(string? userName = null, string? password = null)
+        // لیست کاربران فعال برای کامبو باکس
+        public async Task<List<UserComboDto>> GetActiveUsers()
         {
-            return await _userRepository.FindByUserNameAndPassword(userName, password);
+            try
+            {
+                var users = await _unitOfWork.Users.FindAsync(u => u.IsActive && !u.IsDelete);
+                return users.Select(u => new UserComboDto
+                {
+                    UserId = u.Id,
+                    FullName = u.People != null ? $"{u.People.FirstName} {u.People.LastName}" : null
+                }).ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "خطا در دریافت کاربران فعال");
+                return new List<UserComboDto>(); // یا throw; بسته به سناریو
+            }
         }
 
-        public async Task<IEnumerable<BusinessEntity.DTO.Settings.UserDto>> GetAll()
+        // جستجوی کاربر برای لاگین (با Include)
+        public async Task<User?> FindByUserNameAndPassword(string userName, string password)
         {
-            return await _userRepository.GetAll();
-        }
-
-        public async Task<User?> GetById(int id)
-        {
-            return await _userRepository.GetById(id);
-        }
-
-        public async Task<Result> Create(User user, int currentUserId)
-        {
-            await using var transaction = await _context.Database.BeginTransactionAsync();
+            if (string.IsNullOrWhiteSpace(userName) || string.IsNullOrWhiteSpace(password))
+                return null;
 
             try
             {
-                // اعتبارسنجی
-                if (string.IsNullOrWhiteSpace(user.UserName))
-                    return Result.Failure("نام کاربری الزامی است.");
+                var users = await _unitOfWork.Users.FindAsync(
+                    u => u.UserName == userName && !u.IsDelete,
+                    default,
+                    u => u.Group_User,
+                    u => u.Group_User.AccessLevel);
 
-                if (string.IsNullOrWhiteSpace(user.Password))
-                    return Result.Failure("رمز عبور الزامی است.");
+                var user = users.FirstOrDefault();
 
-                if (user.Password.Length < 6)
-                    return Result.Failure("رمز عبور باید حداقل ۶ کاراکتر باشد.");
+                if (user == null || !PasswordHasher.Verify(password, user.Password))
+                    return null;
 
-                if (user.PeopleId <= 0)
-                    return Result.Failure("شخص باید انتخاب شود.");
+                return user;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "خطا در جستجوی کاربر برای لاگین با نام {UserName}", userName);
+                return null;
+            }
+        }
 
-                if (user.GroupUserId <= 0)
-                    return Result.Failure("گروه کاربری باید انتخاب شود.");
+        // دریافت همه کاربران (تبدیل به DTO)
+        public async Task<IEnumerable<UserDto>> GetAll()
+        {
+            try
+            {
+                var users = await _unitOfWork.Users.GetAllAsync(default, u => u.People, u => u.Group_User);
+                return users.Where(u => !u.IsDelete).Select(MapToDto).ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "خطا در GetAll کاربران");
+                // در صورت تمایل می‌توانید Exception را دوباره پرتاب کنید یا یک لیست خالی برگردانید
+                // اینجا بسته به نیاز پروژه تصمیم بگیرید. پیشنهاد: پرتاب خطا برای مدیریت متمرکز
+                throw;
+            }
+        }
+
+        // دریافت یک کاربر با شناسه
+        public async Task<UserDto?> GetById(int id)
+        {
+            try
+            {
+                var user = await _unitOfWork.Users.GetByIdAsync(id, default, u => u.People, u => u.Group_User);
+                return user == null || user.IsDelete ? null : MapToDto(user);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "خطا در دریافت کاربر با شناسه {Id}", id);
+                throw;
+            }
+        }
+
+        // ایجاد کاربر جدید
+        public async Task<Result> Create(UserCreateDto dto, int currentUserId)
+        {
+            // اعتبارسنجی اولیه
+            if (string.IsNullOrWhiteSpace(dto.UserName))
+                return Result.Failure("نام کاربری الزامی است.");
+            if (string.IsNullOrWhiteSpace(dto.Password))
+                return Result.Failure("رمز عبور الزامی است.");
+            if (dto.Password.Length < 6)
+                return Result.Failure("رمز عبور باید حداقل ۶ کاراکتر باشد.");
+            if (dto.PeopleId <= 0)
+                return Result.Failure("شخص باید انتخاب شود.");
+            if (dto.GroupUserId <= 0)
+                return Result.Failure("گروه کاربری باید انتخاب شود.");
+
+            try
+            {
+                // بررسی تکراری نبودن نام کاربری
+                var existing = await _unitOfWork.Users.FirstOrDefaultAsync(u => u.UserName == dto.UserName);
+                if (existing != null)
+                    return Result.Failure("این نام کاربری قبلاً ثبت شده است.");
 
                 // ایجاد کاربر
-                var dalResult = await _userRepository.Create(user);
-                if (!dalResult.IsSuccess)
-                    return Result.Failure(dalResult.Message);   // ✅ تبدیل به BLL Result
+                var user = new User
+                {
+                    UserName = dto.UserName.Trim(),
+                    Password = PasswordHasher.Hash(dto.Password),
+                    PeopleId = dto.PeopleId,
+                    GroupUserId = dto.GroupUserId,
+                    IsActive = dto.IsActive,
+                    Validity = dto.Validity?.ToUniversalTime() ?? DateTime.UtcNow.AddYears(1),
+                    ImageAddress = dto.ImageAddress,
+                    LastActivity = DateTime.UtcNow,
+                    IsDelete = false
+                };
 
-                // ذخیره تغییرات
-                await _context.SaveChangesAsync();
+                await _unitOfWork.Users.AddAsync(user);
+                await _unitOfWork.SaveChangesAsync();
 
-                // ثبت لاگ
-                await _logService.CreateLogAsync(
-                    $"ایجاد کاربر جدید: {user.UserName} (شناسه: {user.Id})",
-                    currentUserId);
-
-                await transaction.CommitAsync();
+                await _logService.CreateLogAsync($"ایجاد کاربر جدید: {user.UserName} (شناسه {user.Id})", currentUserId);
                 return Result.Success("کاربر با موفقیت ایجاد شد.");
             }
             catch (Exception ex)
             {
-                await transaction.RollbackAsync();
-                _logger.LogError(ex, "خطا در ایجاد کاربر: {@User}", user);
+                _logger.LogError(ex, "خطا در ایجاد کاربر");
                 return Result.Failure($"خطا در ایجاد کاربر: {ex.Message}");
             }
         }
 
-        public async Task<Result> Update(User user, int currentUserId)
+        // ویرایش کاربر
+        public async Task<Result> Update(int id, UserUpdateDto dto, int currentUserId)
         {
-            await using var transaction = await _context.Database.BeginTransactionAsync();
-
             try
             {
-                // اعتبارسنجی
-                if (string.IsNullOrWhiteSpace(user.UserName))
-                    return Result.Failure("نام کاربری الزامی است.");
+                var existingUser = await _unitOfWork.Users.GetByIdAsync(id);
+                if (existingUser == null || existingUser.IsDelete)
+                    return Result.Failure("کاربر یافت نشد.");
 
-                if (user.PeopleId <= 0)
-                    return Result.Failure("شخص باید انتخاب شود.");
+                // اعتبارسنجی نام کاربری (اگر تغییر کرده باشد)
+                if (!string.IsNullOrWhiteSpace(dto.UserName) && dto.UserName != existingUser.UserName)
+                {
+                    var duplicate = await _unitOfWork.Users.FirstOrDefaultAsync(u => u.UserName == dto.UserName);
+                    if (duplicate != null)
+                        return Result.Failure("این نام کاربری قبلاً ثبت شده است.");
+                    existingUser.UserName = dto.UserName.Trim();
+                }
 
-                if (user.GroupUserId <= 0)
-                    return Result.Failure("گروه کاربری باید انتخاب شود.");
+                // به‌روزرسانی فیلدها
+                if (dto.PeopleId.HasValue)
+                    existingUser.PeopleId = dto.PeopleId.Value;
+                if (dto.GroupUserId.HasValue)
+                    existingUser.GroupUserId = dto.GroupUserId.Value;
+                if (dto.IsActive.HasValue)
+                    existingUser.IsActive = dto.IsActive.Value;
+                if (!string.IsNullOrWhiteSpace(dto.ImageAddress))
+                    existingUser.ImageAddress = dto.ImageAddress;
+                if (dto.Validity.HasValue)
+                    existingUser.Validity = dto.Validity.Value.ToUniversalTime();
 
-                // اگر رمز عبور جدید داده شده
-                if (!string.IsNullOrWhiteSpace(user.Password) && user.Password.Length < 6)
-                    return Result.Failure("رمز عبور جدید باید حداقل ۶ کاراکتر باشد.");
+                // اگر رمز عبور جدید داده شده، هش کن
+                if (!string.IsNullOrWhiteSpace(dto.Password))
+                {
+                    if (dto.Password.Length < 6)
+                        return Result.Failure("رمز عبور جدید باید حداقل ۶ کاراکتر باشد.");
+                    existingUser.Password = PasswordHasher.Hash(dto.Password);
+                }
 
-                // به‌روزرسانی کاربر
-                var dalResult = await _userRepository.Update(user);
-                if (!dalResult.IsSuccess)
-                    return Result.Failure(dalResult.Message);   // ✅ تبدیل به BLL Result
+                _unitOfWork.Users.Update(existingUser);
+                await _unitOfWork.SaveChangesAsync();
 
-                // ذخیره تغییرات
-                await _context.SaveChangesAsync();
-
-                // ثبت لاگ
-                await _logService.CreateLogAsync(
-                    $"به‌روزرسانی کاربر: {user.UserName} (شناسه: {user.Id})",
-                    currentUserId);
-
-                await transaction.CommitAsync();
+                await _logService.CreateLogAsync($"ویرایش کاربر {existingUser.UserName} (شناسه {id})", currentUserId);
                 return Result.Success("کاربر با موفقیت به‌روزرسانی شد.");
             }
             catch (Exception ex)
             {
-                await transaction.RollbackAsync();
-                _logger.LogError(ex, "خطا در به‌روزرسانی کاربر: {@User}", user);
-                return Result.Failure($"خطا در به‌روزرسانی کاربر: {ex.Message}");
+                _logger.LogError(ex, "خطا در ویرایش کاربر با شناسه {Id}", id);
+                return Result.Failure($"خطا در ویرایش کاربر: {ex.Message}");
             }
         }
 
+        // حذف کاربر (Soft Delete)
         public async Task<Result> Delete(int id, int currentUserId)
         {
-            await using var transaction = await _context.Database.BeginTransactionAsync();
-
             try
             {
-                // دریافت اطلاعات کاربر برای لاگ
-                var user = await _userRepository.GetById(id);
-                if (user == null)
+                var user = await _unitOfWork.Users.GetByIdAsync(id);
+                if (user == null || user.IsDelete)
                     return Result.Failure("کاربر یافت نشد.");
-
-                // بررسی اینکه کاربر جاری خودش را حذف نکند
                 if (user.Id == currentUserId)
                     return Result.Failure("شما نمی‌توانید حساب کاربری خود را حذف کنید.");
 
-                // حذف کاربر
-                var dalResult = await _userRepository.Delete(id);
-                if (!dalResult.IsSuccess)
-                    return Result.Failure(dalResult.Message);   // ✅ تبدیل به BLL Result
+                user.IsDelete = true;
+                user.IsActive = false;
+                _unitOfWork.Users.Update(user);
+                await _unitOfWork.SaveChangesAsync();
 
-                // ذخیره تغییرات
-                await _context.SaveChangesAsync();
-
-                // ثبت لاگ
-                await _logService.CreateLogAsync(
-                    $"حذف کاربر: {user.UserName} (شناسه: {id})",
-                    currentUserId);
-
-                await transaction.CommitAsync();
+                await _logService.CreateLogAsync($"حذف کاربر {user.UserName} (شناسه {id})", currentUserId);
                 return Result.Success("کاربر با موفقیت حذف شد.");
             }
             catch (Exception ex)
             {
-                await transaction.RollbackAsync();
-                _logger.LogError(ex, "خطا در حذف کاربر با شناسه: {Id}", id);
+                _logger.LogError(ex, "خطا در حذف کاربر با شناسه {Id}", id);
                 return Result.Failure($"خطا در حذف کاربر: {ex.Message}");
             }
+        }
+
+        // تبدیل موجودیت User به DTO (امن در برابر null)
+        private UserDto MapToDto(User user)
+        {
+            return new UserDto
+            {
+                Id = user.Id,
+                UserName = user.UserName,
+                PeopleId = user.PeopleId,
+                PeopleFullName = user.People != null ? $"{user.People.FirstName} {user.People.LastName}" : null,
+                GroupUserId = user.GroupUserId,
+                GroupName = user.Group_User?.Name,
+                IsActive = user.IsActive,
+                LastActivity = user.LastActivity,
+                Validity = user.Validity,
+                ImageAddress = user.ImageAddress
+            };
         }
     }
 }

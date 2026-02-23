@@ -38,6 +38,7 @@ namespace DataAccessLayer.Interface
 
         // ========== اشخاص ==========
         IRepository<BusinessEntity.People.People> People { get; }
+        IRepository<BusinessEntity.Settings.User> Users { get; }
 
         // ========== فاکتور ==========
         IRepository<BusinessEntity.Invoices.Invoices> Invoices { get; }

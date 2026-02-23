@@ -176,7 +176,7 @@ void ConfigureDependencies()
     builder.Services.AddScoped<ILogService, LogService>();
 
     // ================= User & Auth Services =================
-    builder.Services.AddScoped<IUserRepository, UserRepository>();
+   // builder.Services.AddScoped<IUserRepository, UserRepository>();
     builder.Services.AddScoped<IUserService, UserService>();
     builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
     builder.Services.AddScoped<ITokenService, TokenService>();

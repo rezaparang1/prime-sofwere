@@ -47,6 +47,7 @@ namespace DataAccessLayer.Repository
 
             // ========== اشخاص ==========
             People = new Repository<BusinessEntity.People.People>(_context);
+            Users = new Repository<BusinessEntity.Settings.User>(_context);
 
             // ========== فاکتور ==========
             Invoices = new Repository<BusinessEntity.Invoices.Invoices>(_context);
@@ -81,6 +82,7 @@ namespace DataAccessLayer.Repository
 
         // ========== پراپرتی اشخاص ==========
         public IRepository<BusinessEntity.People.People> People { get; }
+        public IRepository<BusinessEntity.Settings.User> Users { get; }
 
         // ========== پراپرتی‌های فاکتور ==========
         public IRepository<BusinessEntity.Invoices.Invoices> Invoices { get; }

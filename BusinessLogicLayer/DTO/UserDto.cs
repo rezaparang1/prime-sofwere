@@ -11,11 +11,12 @@ namespace BusinessLogicLayer.DTO
         public int Id { get; set; }
         public string UserName { get; set; } = string.Empty;
         public int? PeopleId { get; set; }
-        public string? PeopleFullName { get; set; } // نام کامل شخص (اختیاری)
+        public string? PeopleFullName { get; set; }
         public int? GroupUserId { get; set; }
-        public string? GroupName { get; set; }      // نام گروه کاربری
+        public string? GroupName { get; set; }
         public bool IsActive { get; set; }
         public DateTime? LastActivity { get; set; }
         public DateTime? Validity { get; set; }
+        public string? ImageAddress { get; set; }
     }
 }

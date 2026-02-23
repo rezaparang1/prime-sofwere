@@ -1,5 +1,6 @@
 ﻿using BusinessEntity;
 using BusinessLogicLayer;
+using BusinessLogicLayer.DTO;
 using BusinessLogicLayer.Interface.Settings;
 using BusinessLogicLayer.Repository.Fund;
 using BusinessLogicLayer.Repository.Settings;
@@ -15,180 +16,61 @@ namespace Prime_Software.Controllers.Settings
     [Route("api/Settings/User")]
     [ApiController]
     [Authorize]
-    public class UserController : ControllerBase
+    public class UsersController : ControllerBase
     {
-        private readonly ICurrentUserService _currentUser;
         private readonly IUserService _userService;
+        private readonly ICurrentUserService _currentUser;
 
-        public UserController(
-            ICurrentUserService currentUser,
-            IUserService userService)
+        public UsersController(IUserService userService, ICurrentUserService currentUser)
         {
-            _currentUser = currentUser;
-            _userService = userService;
-        }
-        [HttpGet("my-profile")]
-        public async Task<ActionResult<BusinessEntity.Settings.User>> GetByUserId()
-        {
-            var userId = _currentUser.UserId!.Value;        
-            var getbyid = await _userService.GetById(userId);
-            if (getbyid == null)
-            {        
-                return NotFound();
-            }
-            return Ok(getbyid);
+            _userService = userService;   // مقداردهی سرویس کاربر
+            _currentUser = currentUser;    // مقداردهی سرویس کاربر جاری
         }
 
-        // GET: api/User
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            try
-            {
-                var result = await _userService.GetAll();
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new
-                {
-                    message = "خطای داخلی سرور",
-                    error = ex.Message
-                });
-            }
+            var users = await _userService.GetAll();
+            return Ok(new { success = true, data = users });
         }
 
-        // GET: api/User/5
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
-            try
-            {
-                var result = await _userService.GetById(id);
-                if (result == null)
-                    return NotFound(new { message = "کاربر یافت نشد." });
-
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new
-                {
-                    message = "خطای داخلی سرور",
-                    error = ex.Message
-                });
-            }
+            var user = await _userService.GetById(id);
+            if (user == null)
+                return NotFound(new { success = false, message = "کاربر یافت نشد." });
+            return Ok(new { success = true, data = user });
         }
 
-        // GET: api/User/active-users
-        [HttpGet("user_active")]
-        public async Task<IActionResult> GetActiveUsers()
-        {
-            try
-            {
-                var result = await _userService.GetActiveUsersAsync();
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new
-                {
-                    message = "خطای داخلی سرور",
-                    error = ex.Message
-                });
-            }
-        }
-
-        // POST: api/User
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] BusinessEntity.Settings.User user)
+        public async Task<IActionResult> Create([FromBody] UserCreateDto dto)
         {
-            try
-            {
-                if (!ModelState.IsValid)
-                    return BadRequest(new
-                    {
-                        message = "داده‌های ارسالی معتبر نیستند.",
-                        errors = ModelState.Values
-                            .SelectMany(v => v.Errors)
-                            .Select(e => e.ErrorMessage)
-                    });
-
-                var currentUserId = _currentUser.UserId ?? throw new UnauthorizedAccessException("کاربر شناسایی نشد.");
-                var result = await _userService.Create(user, currentUserId);
-
-                if (!result.IsSuccess)
-                    return BadRequest(new { message = result.Message });
-
-                return CreatedAtAction(
-                    nameof(GetById),
-                    new { id = user.Id },
-                    new
-                    {
-                        message = result.Message,
-                        userId = user.Id
-                    });
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                return Unauthorized(new { message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new
-                {
-                    message = "خطای داخلی سرور",
-                    error = ex.Message
-                });
-            }
+            var userId = _currentUser.UserId!.Value;
+            var result = await _userService.Create(dto, userId);
+            if (!result.IsSuccess)
+                return BadRequest(new { success = false, message = result.Message });
+            return Ok(new { success = true, message = result.Message });
         }
 
-        // PUT: api/User/5
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, [FromBody] BusinessEntity.Settings.User user)
+        public async Task<IActionResult> Update(int id, [FromBody] UserUpdateDto dto)
         {
-            try
-            {
-                if (!ModelState.IsValid)
-                    return BadRequest(new
-                    {
-                        message = "داده‌های ارسالی معتبر نیستند.",
-                        errors = ModelState.Values
-                            .SelectMany(v => v.Errors)
-                            .Select(e => e.ErrorMessage)
-                    });
+            var userId = _currentUser.UserId!.Value;
+            var result = await _userService.Update(id, dto, userId);
+            if (!result.IsSuccess)
+                return BadRequest(new { success = false, message = result.Message });
+            return Ok(new { success = true, message = result.Message });
+        }
 
-                if (id != user.Id)
-                    return BadRequest(new { message = "شناسه ارسال شده با شناسه کاربر مطابقت ندارد." });
-
-                var currentUserId = _currentUser.UserId ?? throw new UnauthorizedAccessException("کاربر شناسایی نشد.");
-                var result = await _userService.Update(user, currentUserId);
-
-                if (!result.IsSuccess)
-                    return BadRequest(new { message = result.Message });
-
-                return Ok(new
-                {
-                    message = result.Message,
-                    userId = user.Id
-                });
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                return Unauthorized(new { message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new
-                {
-                    message = "خطای داخلی سرور",
-                    error = ex.Message
-                });
-            }
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var userId = _currentUser.UserId!.Value;
+            var result = await _userService.Delete(id, userId);
+            if (!result.IsSuccess)
+                return BadRequest(new { success = false, message = result.Message });
+            return Ok(new { success = true, message = result.Message });
         }
     }
-   
-    
-
-
-    }
+}

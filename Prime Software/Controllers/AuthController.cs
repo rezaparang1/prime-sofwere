@@ -46,11 +46,8 @@ namespace Prime_Software.Controllers
             var userId = _currentUser.UserId;
             if (userId == null) return Unauthorized();
 
-            // گرفتن کاربر از DB (Include Group_User & AccessLevel)
-            var user = await _users.GetById(userId.Value);
-
-            if (user == null)
-                return NotFound(); // یا Unauthorized، بسته به منطق شما
+            var user = await _users.GetUserEntityByIdAsync(userId.Value);
+            if (user == null) return NotFound();
 
             return Ok(new
             {
