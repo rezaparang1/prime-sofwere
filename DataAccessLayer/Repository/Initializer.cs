@@ -42,6 +42,32 @@ namespace DataAccessLayer.Repository
             }
             await _db.SaveChangesAsync();
 
+
+            // -----------------------
+            // فروشگاه پیش‌فرض (Store)
+            // -----------------------
+            var defaultStore = await _db.Set<BusinessEntity.Customer_Club.Store>()
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(s => s.Name == "فروشگاه مرکزی");
+
+            if (defaultStore != null)
+            {
+                defaultStore.IsDelete = false;
+            }
+            else
+            {
+                defaultStore = new BusinessEntity.Customer_Club.Store
+                {
+                    Name = "فروشگاه مرکزی",
+                    Address = "آدرس پیش‌فرض",
+                    Phone = "021-12345678",
+                    ManagerName = "مدیر سیستم",
+                    IsActive = true,
+                    RegisterDate = DateTime.UtcNow
+                };
+                _db.Add(defaultStore);
+            }
+            await _db.SaveChangesAsync();
             // -----------------------
             // نوع محصولات
             // -----------------------

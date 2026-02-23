@@ -22,8 +22,8 @@ namespace BusinessEntity.Customer_Club
 
         [MaxLength(50)]
         public string? ManagerName { get; set; }
-
         public bool IsActive { get; set; } = true;
+        public bool IsDelete { get; set; } 
         public DateTime RegisterDate { get; set; } = DateTime.UtcNow;
 
         // Navigation Properties

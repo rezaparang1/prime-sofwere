@@ -3,6 +3,7 @@ using BusinessLogicLayer.DTO;
 using BusinessLogicLayer.Interface.Customer_Club;
 using DataAccessLayer.Interface;              // برای IUnitOfWork
 using DataAccessLayer.Interface.Customer_Club;
+using Microsoft.Extensions.Logging;
 
 
 namespace BusinessLogicLayer.Repository.Customer_Club
@@ -10,10 +11,12 @@ namespace BusinessLogicLayer.Repository.Customer_Club
     public class CustomerService : ICustomerService
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ILogger<CustomerService> _logger;
 
-        public CustomerService(IUnitOfWork unitOfWork)
+        public CustomerService(IUnitOfWork unitOfWork , ILogger<CustomerService> logger)
         {
             _unitOfWork = unitOfWork;
+            _logger = logger;
         }
 
         public async Task<Result<List<CustomerDto>>> SearchCustomersAsync(
@@ -56,19 +59,26 @@ namespace BusinessLogicLayer.Repository.Customer_Club
         }
         public async Task<Result<CustomerDto>> RegisterCustomerAsync(CustomerRegisterDto dto)
         {
-            // اعتبارسنجی
+            // اعتبارسنجی اولیه
             if (string.IsNullOrWhiteSpace(dto.Mobile))
                 return Result<CustomerDto>.Failure("شماره موبایل الزامی است");
 
+            // بررسی تکراری نبودن موبایل
             var existing = await _unitOfWork.Customers.GetByMobileAsync(dto.Mobile);
             if (existing != null)
                 return Result<CustomerDto>.Failure("این شماره موبایل قبلاً ثبت شده است");
 
-            // تولید بارکد یکتا
+            // ✅ بررسی وجود فروشگاه
+            var storeExists = await _unitOfWork.Stores.AnyAsync(s => s.Id == dto.StoreId);
+            if (!storeExists)
+                return Result<CustomerDto>.Failure(" انتخاب‌شده معتبر نیست");
+
+            // تولید بارکد
             var barcodeResult = await GenerateCustomerBarcodeAsync();
             if (!barcodeResult.IsSuccess)
                 return Result<CustomerDto>.Failure(barcodeResult.Message);
 
+            // ایجاد مشتری
             var customer = new Customer
             {
                 FirstName = dto.FirstName,
@@ -80,7 +90,7 @@ namespace BusinessLogicLayer.Repository.Customer_Club
                 IsActive = true,
                 IsClubMember = dto.RegisterInClub,
                 StoreId = dto.StoreId,
-                PeopleId = dto.PeopleId, // اتصال به People در صورت وجود
+                PeopleId = dto.PeopleId,
                 TotalPoints = 0,
                 CurrentPoints = 0
             };
@@ -88,7 +98,7 @@ namespace BusinessLogicLayer.Repository.Customer_Club
             await _unitOfWork.Customers.AddAsync(customer);
             await _unitOfWork.SaveChangesAsync();
 
-            // اگر عضو باشگاه شد، کیف پول ایجاد کن
+            // ایجاد کیف پول در صورت عضویت
             if (dto.RegisterInClub)
             {
                 var wallet = new Wallet
@@ -104,7 +114,6 @@ namespace BusinessLogicLayer.Repository.Customer_Club
             var resultDto = await MapToDto(customer);
             return Result<CustomerDto>.Success(resultDto, "مشتری با موفقیت ثبت شد");
         }
-
         public async Task<Result<string>> GenerateCustomerBarcodeAsync()
         {
             string barcode;
